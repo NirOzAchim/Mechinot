@@ -18,8 +18,8 @@
 import { PARSERS } from "../../core/import.js";
 import { MODULE_CATALOG, ROLE_CATALOG, activeModules, activeScreens, suggestedRoles, roleScreens } from "../../core/catalog.js";
 import { WIZARD_STEPS, missingSteps, VOCAB_KEYS, validateProfile, resolveProfile } from "../../core/profile.js";
-import { readDelta, writeDelta, loadProfile, invalidateProfile } from "../profile-store.js";
-import PREMIL from "../../core/presets/premil.js";
+/* ⚠ הדלתא מאובייקט המכינה — ראו ההערה ב-routes/profile.js. */
+import { presetOf } from "../tenants.js";
 import { DataError } from "../data/store.js";
 import { hashPassword } from "../auth.js";
 
@@ -84,7 +84,7 @@ const STEP_FIELDS = {
   texts: ["texts"],
 };
 
-export async function save({ body }) {
+export async function save({ body, tenant }) {
   const step = String(body?.step || "");
   const fields = STEP_FIELDS[step];
   if (!fields) throw new DataError(`שלב לא מוכר: ${step}`);
@@ -93,7 +93,7 @@ export async function save({ body }) {
   for (const f of fields) if (body[f] !== undefined) patch[f] = body[f];
   if (!Object.keys(patch).length) throw new DataError("לא נשלח דבר לשמירה");
 
-  const current = readDelta();
+  const current = tenant.readDelta();
   const next = { ...current, preset: current.preset || "premil" };
   for (const [k, v] of Object.entries(patch)) {
     /* ⚠ מיזוג רדוד לשדה, כדי ששמירת «צבעים» לא תמחק «שם». */
@@ -101,13 +101,13 @@ export async function save({ body }) {
       ? { ...(current[k] || {}), ...v } : v;
   }
 
-  const merged = resolveProfile(PREMIL, next);
+  const merged = resolveProfile(presetOf(next), next);
   const v = validateProfile(merged);
   if (!v.ok) throw new DataError("האפיון אינו תקין: " + v.errors.join(" · "));
 
-  writeDelta(next);
-  invalidateProfile();
-  const after = await loadProfile();
+  tenant.writeDelta(next);
+  tenant.invalidateProfile();
+  const after = await tenant.loadProfile();
 
   return {
     ok: true, step,

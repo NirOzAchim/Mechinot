@@ -10,25 +10,21 @@
    הרצה:  npm run seed      ·  npm run reset
    ============================================================ */
 
-import { resolve } from "node:path";
-import { fileURLToPath } from "node:url";
-import { existsSync, rmSync } from "node:fs";
-
-import { fileEngine } from "../server/data/file-engine.js";
-import { createStore } from "../server/data/store.js";
 import { hashPassword } from "../server/auth.js";
-import { writeDelta, DELTA_FILE } from "../server/profile-store.js";
+import { args, ensureTenant } from "./_tenant.mjs";
 
-const ROOT = resolve(fileURLToPath(import.meta.url), "../..");
-const DB = process.env.DATA_FILE || resolve(ROOT, ".data/db.json");
-const RESET = process.argv.includes("--reset");
-
-if (RESET) {
-  for (const f of [DB, DELTA_FILE]) if (existsSync(f)) rmSync(f);
-  console.log("אופס הכול.\n");
-}
-
-const db = createStore(fileEngine(DB));
+/* ⚠ **על איזו מכינה זה כותב — נאמר, ולא מונח.** ברירת המחדל
+   היא `demo`, ולא «המכינה היחידה»: מרגע שיש קונסולה, «יחידה»
+   אינו מושג. `--reset` דורס את הקיימת ואומר זאת. */
+const { flag, has } = args();
+const slug = flag("slug", "demo");
+const t = await ensureTenant({
+  slug,
+  name: "מכינת עין פרת",
+  force: has("reset") || has("force"),
+});
+const db = t.db;
+const writeDelta = t.writeDelta;
 
 /* ============================================================
    1. האפיון — הדלתא של «מכינת עין פרת» מעל התבנית
@@ -205,9 +201,12 @@ for (const [name, category, guide] of TEAMS) {
 console.log(`✓ ${TEAMS.length} מסגרות`);
 
 console.log("");
+console.log(`  ${"http://localhost:5180/m/" + slug + "/"}`);
+console.log("");
 console.log("  כניסה:");
 console.log("    david   / mechina2026   ראש המכינה");
 console.log("    renana  / mechina2026   מדריכה");
 console.log("    chanich / mechina2026   חניך");
 console.log("");
 console.log("  npm run dev");
+console.log("");

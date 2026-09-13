@@ -15,7 +15,7 @@
    ============================================================ */
 
 import { MODULE_CATALOG, activeModules, activeScreens } from "../../core/catalog.js";
-import { screensFor } from "../../core/vocab.js";
+import { screensOf } from "../auth.js";
 
 /* ⚠ סדר הקבוצות. מודול שאינו ברשימה יורד **לסוף** ואינו
    קופץ לראש — `indexOf` על מערך סגור מחזיר ‎-1‎ למה שאינו בו,
@@ -34,7 +34,7 @@ const rank = (m) => {
 
 export async function menu({ profile, user }) {
   const mods = profile.modules || {};
-  const allowed = screensFor(profile, user.roles);
+  const allowed = screensOf(profile, user);
   const all = allowed.includes("*");
 
   const may = (s) => {

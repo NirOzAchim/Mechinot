@@ -18,10 +18,45 @@
 let onUnauthorized = () => {};
 export const setUnauthorizedHandler = (fn) => { onUnauthorized = fn; };
 
+/* ============================================================
+   ⚠⚠ המכינה נקראת מהכתובת, במקום אחד
+   ------------------------------------------------------------
+   `/m/<slug>/…` → כל קריאה יוצאת ל-`/m/<slug>/api/…`.
+
+   **זה חייב להיגזר מהכתובת ולא להישמר במשתנה.** משתנה
+   שנקבע בטעינה היה שורד ניווט בין מכינות באותה לשונית —
+   ואז מסך אחד מציג מכינה א׳ ושולח למכינה ב׳. הכתובת היא
+   המקום היחיד שאי אפשר שיסתור את עצמו.
+
+   ⚠ הקונסולה (`/api/admin/…`) אינה תחת מכינה כלל, ולכן יש
+     לה `callAdmin` נפרדת. פונקציה אחת עם דגל הייתה יוצרת
+     בדיוק את הבאג שבו קריאה של הקונסולה נשלחת לתוך מכינה.
+   ============================================================ */
+const M_RE = /^\/m\/([a-z][a-z0-9-]{1,31})(\/|$)/;
+
+export function currentSlug() {
+  const m = M_RE.exec(window.location.pathname);
+  return m ? m[1] : null;
+}
+
+/** הבסיס לניווט בתוך האפליקציה של המכינה */
+export const base = () => {
+  const s = currentSlug();
+  return s ? `/m/${s}` : "";
+};
+
 async function call(path, { method = "GET", body } = {}) {
+  const slug = currentSlug();
+  if (!slug) {
+    /* ⚠ כשל מפורש ולא «אין נתונים»: קריאה של האפליקציה
+       מחוץ לנתיב של מכינה היא באג, ולא מצב ריק. */
+    const e = new Error("הכתובת אינה של מכינה");
+    e.status = 400;
+    throw e;
+  }
   let res;
   try {
-    res = await fetch(`/api/${path}`, {
+    res = await fetch(`/m/${slug}/api/${path}`, {
       method,
       headers: body ? { "Content-Type": "application/json" } : undefined,
       body: body ? JSON.stringify(body) : undefined,
@@ -38,7 +73,13 @@ async function call(path, { method = "GET", body } = {}) {
   try { data = await res.json(); } catch { /* גוף ריק */ }
 
   if (res.status === 401) {
-    onUnauthorized(data?.error || "הסשן פג");
+    /* ⚠⚠ **כישלון כניסה אינו סשן שפג.** בגרסה הראשונה כל 401
+       הפעיל את המטפל הגלובלי, ולכן מסך הכניסה הציג את אותה
+       הודעה **פעמיים** — פעם כ«הודעה» ופעם כ«שגיאה». מי
+       שרואה את זה מסיק שהמערכת שבורה, לא שהסיסמה שגויה. */
+    if (!path.startsWith("session/login")) {
+      onUnauthorized(data?.error || "הסשן פג");
+    }
     const e = new Error(data?.error || "יש להתחבר");
     e.status = 401;
     throw e;
@@ -87,4 +128,52 @@ export const api = {
   /* ⚠ מצב רצוי ולא «הפוך» — שניים שמסמנים יחד מקבלים אותה
      תוצאה. ראו ההערה ב-server/routes/attendance.js. */
   mark: (date, marks) => call("attendance/mark", { method: "POST", body: { date, marks } }),
+};
+
+/* ============================================================
+   הדלת של הקונסולה
+   ------------------------------------------------------------
+   ⚠⚠ **נפרדת לגמרי, וגם ה-401 שלה נפרד.** מי שהסשן שלו
+     בקונסולה פג אינו «יצא ממכינה» — המטפל הגלובלי של
+     האפליקציה אינו אמור להישמע כאן בכלל.
+   ============================================================ */
+async function callAdmin(path, { method = "GET", body } = {}) {
+  let res;
+  try {
+    res = await fetch(`/api/admin/${path}`, {
+      method,
+      headers: body ? { "Content-Type": "application/json" } : undefined,
+      body: body ? JSON.stringify(body) : undefined,
+      credentials: "same-origin",
+    });
+  } catch {
+    const e = new Error("אין חיבור לשרת");
+    e.offline = true;
+    throw e;
+  }
+
+  let data = null;
+  try { data = await res.json(); } catch { /* גוף ריק */ }
+
+  if (!res.ok) {
+    const e = new Error(data?.error || `שגיאה ${res.status}`);
+    e.status = res.status;
+    throw e;
+  }
+  return data;
+}
+
+export const admin = {
+  state: () => callAdmin("state"),
+  setup: (user, password) => callAdmin("setup", { method: "POST", body: { user, password } }),
+  login: (user, password) => callAdmin("login", { method: "POST", body: { user, password } }),
+  logout: () => callAdmin("logout", { method: "POST" }),
+
+  create: (fields) => callAdmin("create", { method: "POST", body: fields }),
+  update: (slug, fields) => callAdmin("update", { method: "PUT", body: { slug, ...fields } }),
+  remove: (slug, confirm) => callAdmin("delete", { method: "POST", body: { slug, confirm } }),
+  account: (fields) => callAdmin("account", { method: "POST", body: fields }),
+  /* ⚠ נקרא **לפני** שפותחים את המכינה, כדי שהכניסה תירשם.
+     ראו ההערה ב-server/routes/admin.js. */
+  enter: (slug) => callAdmin("enter", { method: "POST", body: { slug } }),
 };

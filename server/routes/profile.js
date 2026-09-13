@@ -10,22 +10,37 @@
      החוצה מעצמו. זה הכלל שחוזר בכל נקודת קצה שמחזירה נתון.
    ============================================================ */
 
-import { readDelta, writeDelta, loadProfile, invalidateProfile } from "../profile-store.js";
+/* ⚠⚠ **הדלתא נקראת מאובייקט המכינה ולא ממודול.** גרסה
+   קודמת ייבאה `readDelta`/`loadProfile` ברמת הקובץ, וזה
+   היה נכון כל עוד פריסה = מכינה. ברגע שיש קונסולה, מצב
+   ברמת המודול פירושו שמכינה אחת כותבת לדלתא של אחרת. */
 import { validateProfile, resolveProfile, WIZARD_STEPS, missingSteps, MODULES } from "../../core/profile.js";
-import PREMIL from "../../core/presets/premil.js";
+import { presetOf } from "../tenants.js";
 import { DataError } from "../data/store.js";
 
 /** מה שמותר לכל אדם בעולם לראות — לפני כניסה */
 export async function publicProfile({ profile }) {
   return {
     name: profile.identity?.name || "",
+    /* ⚠ השם שבמרשם, למסך שנטען לפני שהאפיון נשמר. מכינה
+       חדשה נפתחת עם `identity.name` ריק **במכוון** (כדי
+       שהאשף ייפתח על שלב 1), ומסך כניסה בלי שום שם נראה
+       כמו מסך של אף אחד. ראו server/tenants.js. */
+    registryName: profile.identity?.registryName || "",
     shortName: profile.identity?.shortName || "",
     tagline: profile.identity?.tagline || "",
     colors: profile.identity?.colors || {},
     logo: profile.identity?.logo || null,
     /* ⚠ נאמר במפורש כשהאפיון עוד לא הושלם — מסך כניסה בלי שם
-       נראה שבור, והסיבה האמיתית היא שלב שלא נעשה. */
-    setupNeeded: missingSteps(profile),
+       נראה שבור, והסיבה האמיתית היא שלב שלא נעשה.
+
+       ⚠⚠ **בשמות ולא במפתחות.** `missingSteps` מחזיר מפתחות
+         (`identity`, `year`), והמסך הציג אותם כלשונם: מנהל
+         מכינה קרא «חסרים: identity · year» ולא ידע מה זה.
+         המפתח נשמר, התווית מוצגת — אותו כלל בדיוק, והפעם
+         בשלבי האשף. */
+    setupNeeded: missingSteps(profile).map((k) =>
+      WIZARD_STEPS.find((s) => s.key === k)?.title || k),
   };
 }
 
@@ -49,24 +64,24 @@ export async function fullProfile({ profile }) {
  *   האפליקציה בטעינה הבאה, ואז אין מסך שדרכו מתקנים אותו.
  * ⚠ **דלתא ולא מסמך מלא** — כך תיקון בתבנית מגיע לכל המכינות.
  */
-export async function update({ body }) {
+export async function update({ body, tenant }) {
   const patch = body?.profile;
   if (!patch || typeof patch !== "object") {
     throw new DataError("לא נשלח מסמך אפיון");
   }
 
-  const current = readDelta();
+  const current = tenant.readDelta();
   const next = { ...current, ...patch, preset: current.preset || "premil" };
 
-  const merged = resolveProfile(PREMIL, next);
+  const merged = resolveProfile(presetOf(next), next);
   const v = validateProfile(merged);
   if (!v.ok) {
     throw new DataError("האפיון אינו תקין: " + v.errors.join(" · "));
   }
 
-  writeDelta(next);
-  invalidateProfile();
-  const after = await loadProfile();
+  tenant.writeDelta(next);
+  tenant.invalidateProfile();
+  const after = await tenant.loadProfile();
 
   return {
     ok: true,

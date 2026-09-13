@@ -79,8 +79,10 @@ export async function list({ db, user, profile, query }) {
 
 /** הנתונים של המשתמש על עצמו — מהשורה שלו בלבד */
 export async function myProfile({ db, user, profile }) {
+  /* ⚠ מנהל-על אינו אדם במכינה — ראו server/auth.js. */
+  if (!user.personId) return { person: null, roles: [], notAPerson: true };
   const p = await db.get("person", user.personId);
-  if (!p) return { person: null };
+  if (!p) return { person: null, roles: [] };
 
   return {
     person: {

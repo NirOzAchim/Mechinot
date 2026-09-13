@@ -161,6 +161,10 @@ export async function summarize(db, profile, personId) {
 
 /** הסיכום של המשתמש על עצמו */
 export async function mySummary({ db, profile, user }) {
+  /* ⚠ מנהל-על אינו אדם במכינה ואין לו נוכחות. `null` מפורש
+     ולא סיכום של אפס — אפס כאן היה נראה כמו מי שלא הגיע
+     מעולם, וזו טענה שגויה על נתון שאינו קיים. */
+  if (!user.personId) return { summary: null, quota: null, notAPerson: true };
   const s = await summarize(db, profile, user.personId);
   return { summary: s, quota: profile.year?.vacationQuota ?? null };
 }

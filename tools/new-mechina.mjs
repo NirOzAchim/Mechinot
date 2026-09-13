@@ -1,9 +1,8 @@
 /* ============================================================
    מכינה חדשה — פריסה ריקה עם חשבון אחד
    ------------------------------------------------------------
-   זו הפעולה שהסטודיו יעשה אוטומטית ביום שיהיה תשלום: מכינה
-   קונה, מקבלת פריסה, ובה **חשבון אחד** — ראש המכינה — ואפיון
-   ריק. משם הוא נכנס ובונה לעצמו.
+   זו הפעולה שהקונסולה עושה בלחיצה, וכאן היא בשורת פקודה —
+   לסביבה שאין בה דפדפן.
 
    ⚠⚠ **הכול ריק במכוון, חוץ מהתבנית.** אין חניכים, אין לוח
      שנה, ואין תפריט. מה שכן יש: כל התפקידים, כל אוצר המילים
@@ -11,58 +10,61 @@
      ב-90%» לבין «מסך ריק שצריך לבנות מאפס».
 
    ⚠ **`identity.name` נשאר ריק** ולא מקבל את השם שנמסר כאן.
-     השם נכתב, אבל שלבי החובה עדיין חסרים — כי מנהל שנכנס
-     וכבר הכול מוגדר לא ילמד איפה משנים דברים.
+     השם נכתב **למרשם** (זה מה שהקונסולה מציגה), אבל שלבי
+     החובה של האפיון עדיין חסרים — כי מנהל שנכנס וכבר הכול
+     מוגדר לא ילמד איפה משנים דברים.
      (מי שרוצה מכינה מלאה לבדיקה — `npm run seed`.)
 
    הרצה:
-     node tools/new-mechina.mjs "מכינת מיתרים לכיש" --user meitarim
+     npm run new -- "מכינת מיתרים לכיש" --slug meitarim --user meitarim
    ============================================================ */
 
-import { resolve } from "node:path";
-import { fileURLToPath } from "node:url";
-import { existsSync, rmSync } from "node:fs";
+import { hashPassword, USER_RE, normalizeUser } from "../server/auth.js";
+import { suggestSlug } from "../server/tenants.js";
+import { args, ensureTenant } from "./_tenant.mjs";
 
-import { fileEngine } from "../server/data/file-engine.js";
-import { createStore } from "../server/data/store.js";
-import { hashPassword } from "../server/auth.js";
-import { writeDelta, DELTA_FILE } from "../server/profile-store.js";
+const { flag, has, positional } = args();
 
-const ROOT = resolve(fileURLToPath(import.meta.url), "../..");
-const DB = process.env.DATA_FILE || resolve(ROOT, ".data/db.json");
-
-const args = process.argv.slice(2);
-const name = args.find((a) => !a.startsWith("--")) || "מכינה חדשה";
-const flag = (k, d) => {
-  const i = args.indexOf("--" + k);
-  return i > -1 ? args[i + 1] : d;
-};
-const username = flag("user", "menahel");
+const name = positional[0] || "מכינה חדשה";
+const username = normalizeUser(flag("user", "menahel"));
 const password = flag("pass", "mechina2026");
 const headName = flag("head", "מנהל המכינה");
 
-/* ⚠ **מאפסים במפורש.** פריסה חדשה היא פריסה חדשה; להשאיר
-   נתונים של מכינה קודמת זה בדיוק הבאג שאי אפשר להסביר. */
-for (const f of [DB, DELTA_FILE]) if (existsSync(f)) rmSync(f);
+/* ⚠ ה-slug מוצע מהשם ונשאל במפורש. שם עברי אינו נותן slug
+   תקין, ו«נמציא אחד» היה מייצר כתובות כמו `/m/mechina-3/`
+   שאיש לא יזהה. */
+const slug = flag("slug") || suggestSlug(name);
+if (!slug) {
+  console.error("");
+  console.error("  ✗ אי אפשר לגזור מזהה משם עברי — יש למסור אותו:");
+  console.error(`      npm run new -- "${name}" --slug <מזהה באנגלית>`);
+  console.error("");
+  process.exit(1);
+}
 
-const db = createStore(fileEngine(DB));
+if (!USER_RE.test(username)) {
+  console.error("\n  ✗ שם המשתמש חייב להיות באנגלית קטנה, 3–32 תווים\n");
+  process.exit(1);
+}
 
-/* ⚠ הדלתא מחזיקה **רק** את שם המכינה, ואפילו לא אותו בשדה
-   שנבדק — `identity.name` נשאר ריק כדי שהאשף ייפתח על שלב 1.
-   מה שכן נשמר: שם זמני לכותרת הדפדפן. */
-writeDelta({ preset: "premil", identity: { shortName: name.replace(/^מכינת\s+/, "") } });
+const t = await ensureTenant({ slug, name, force: has("force") });
 
-const head = await db.create("person", {
+/* ⚠ הדלתא מחזיקה את התבנית בלבד. שם המכינה יושב **במרשם**,
+   ו-`identity.name` נשאר ריק כדי שהאשף ייפתח על שלב 1. */
+t.writeDelta({ preset: "premil", identity: {} });
+
+const head = await t.db.create("person", {
   kind: "staff", name: headName, active: true,
 });
-await db.create("account", {
+await t.db.create("account", {
   person: head.id, username, passwordHash: await hashPassword(password),
 });
-await db.create("roleAssignment", { person: head.id, role: "head" });
+await t.db.create("roleAssignment", { person: head.id, role: "head" });
 
 console.log("");
 console.log(`✓ נפרסה מכינה חדשה: ${name}`);
-console.log(`  נתונים : ${DB}`);
+console.log(`  כתובת  : http://localhost:5180/m/${slug}/`);
+console.log(`  נתונים : ${t.paths.db}`);
 console.log("");
 console.log("  יש בה חשבון אחד, ואפיון ריק:");
 console.log(`    ${username} / ${password}   ${headName}`);

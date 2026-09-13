@@ -15,6 +15,8 @@
    ============================================================ */
 
 import { guard } from "../auth.js";
+import { rootGuard } from "../root.js";
+import * as admin from "./admin.js";
 import * as session from "./session.js";
 import * as profile from "./profile.js";
 import * as people from "./people.js";
@@ -63,4 +65,32 @@ export const ROUTES = {
   "attendance/day": { GET: guard(attendance.day, { screen: "attendance" }) },
   "attendance/mark": { POST: guard(attendance.mark, { screen: "attendance" }) },
   "attendance/summary": { GET: guard(attendance.mySummary) },
+};
+
+/* ============================================================
+   הקונסולה — מפה נפרדת, ובכוונה
+   ------------------------------------------------------------
+   ⚠⚠ **אלה אינם נתיבים של מכינה.** הם יושבים תחת `/api/admin/…`
+     ולא תחת `/m/<slug>/api/…`, ואין להם `tenant` בהקשר כלל.
+     ערבוב שתי המפות היה מאפשר לנתיב של מכינה להגיע לפעולה
+     של הקונסולה בטעות — וזו הטעות שאי אפשר לתקן אחר כך.
+
+   ⚠ **`rootGuard` ולא `guard`.** שני שערים שונים לשתי זהויות
+     שונות; `guard` אינו יודע דבר על מנהל-על, ו-`rootGuard`
+     אינו יודע דבר על משתמשי מכינה.
+   ============================================================ */
+export const ADMIN_ROUTES = {
+  /* ⚠ שלושה פתוחים ובכוונה: «האם יש מנהל-על», הקמה ראשונה
+     (מ-localhost בלבד), וכניסה. יציאה חייבת להצליח גם למי
+     שהעוגייה שלו פגה. */
+  "admin/state": { GET: admin.state },
+  "admin/setup": { POST: admin.setup },
+  "admin/login": { POST: admin.login },
+  "admin/logout": { POST: admin.logout },
+
+  "admin/create": { POST: rootGuard(admin.create) },
+  "admin/update": { PUT: rootGuard(admin.update) },
+  "admin/delete": { POST: rootGuard(admin.remove) },
+  "admin/account": { POST: rootGuard(admin.account) },
+  "admin/enter": { POST: rootGuard(admin.enter) },
 };

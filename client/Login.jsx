@@ -22,7 +22,9 @@ export function Login({ brand, notice, onIn }) {
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState(null);
 
-  const name = brand?.name || "מכינות";
+  /* ⚠ נופל לשם שבמרשם לפני שהאפיון נשמר — ראו
+     server/routes/profile.js. */
+  const name = brand?.name || brand?.registryName || "מכינות";
   const initial = (brand?.shortName || name).trim().charAt(0) || "מ";
 
   const submit = async (e) => {

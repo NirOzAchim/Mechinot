@@ -12,8 +12,11 @@
     "start": "node server/start.js",
     "seed": "node tools/seed.mjs",
     "reset": "node tools/seed.mjs --reset",
-    "check": "node tools/check.mjs",
-    "new": "node tools/new-mechina.mjs"
+    "check": "node tools/check.mjs && node tools/check-tenancy.mjs",
+    "check:static": "node tools/check.mjs",
+    "check:tenancy": "node tools/check-tenancy.mjs",
+    "new": "node tools/new-mechina.mjs",
+    "root": "node tools/root.mjs"
   },
   "dependencies": {
     "react": "18.3.1",

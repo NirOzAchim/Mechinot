@@ -20,6 +20,7 @@
    ============================================================ */
 
 import crypto from "node:crypto";
+import { screensFor } from "../core/vocab.js";
 
 const COOKIE = "mx_session";
 const TTL_DAYS = 7;
@@ -72,8 +73,8 @@ function secret() {
 const b64 = (b) => Buffer.from(b).toString("base64url");
 const mac = (d) => b64(crypto.createHmac("sha256", secret()).update(d).digest());
 
-export function sign(payload) {
-  const body = b64(JSON.stringify({ ...payload, exp: Date.now() + TTL_DAYS * 864e5 }));
+export function sign(payload, ttlMs = TTL_DAYS * 864e5) {
+  const body = b64(JSON.stringify({ ...payload, exp: Date.now() + ttlMs }));
   return `${body}.${mac(body)}`;
 }
 
@@ -98,43 +99,123 @@ export const readCookie = (req) => {
   return hit ? decodeURIComponent(hit.slice(COOKIE.length + 1)) : null;
 };
 
-export function setCookie(res, token) {
+/* ============================================================
+   ⚠⚠ העוגייה מוגבלת לנתיב של המכינה
+   ------------------------------------------------------------
+   `Path=/m/<slug>` — הדפדפן אפילו לא שולח אותה למכינה אחרת.
+   זו ההגנה הראשונה, והיא גם מה שמאפשר להיות מחובר לשתי
+   מכינות בשתי לשוניות: בדיוק מה שמנהל-על צריך.
+
+   ⚠ **וההגנה השנייה היא ש-`slug` יושב בתוך האסימון החתום.**
+     מזהי החשבונות רצים בכל מכינה בנפרד («1001», «1002»…),
+     ולכן עוגייה של מכינה א׳ שתגיע למכינה ב׳ הייתה מזהה
+     שם **חשבון אחר לגמרי** — אדם שאיש לא התכוון אליו.
+     שתי ההגנות נחוצות: הראשונה היא התנהגות דפדפן, והשנייה
+     היא מה שהשרת בודק בעצמו.
+   ============================================================ */
+export const cookiePath = (slug) => `/m/${slug}`;
+
+export function setCookie(res, token, slug) {
   const secure = process.env.NODE_ENV === "production" ? "; Secure" : "";
   res.setHeader("Set-Cookie",
-    `${COOKIE}=${encodeURIComponent(token)}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${TTL_DAYS * 86400}${secure}`);
+    `${COOKIE}=${encodeURIComponent(token)}; Path=${cookiePath(slug)}; HttpOnly; SameSite=Lax; Max-Age=${TTL_DAYS * 86400}${secure}`);
 }
 
-export function clearCookie(res) {
+export function clearCookie(res, slug) {
   const secure = process.env.NODE_ENV === "production" ? "; Secure" : "";
-  res.setHeader("Set-Cookie", `${COOKIE}=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0${secure}`);
+  res.setHeader("Set-Cookie",
+    `${COOKIE}=; Path=${cookiePath(slug)}; HttpOnly; SameSite=Lax; Max-Age=0${secure}`);
 }
 
 /* ============================================================
    מי המשתמש — נקרא בכל בקשה
    ⚠ הזהות מגיעה מהעוגייה, **אף פעם לא מגוף הבקשה.**
    ============================================================ */
-export async function currentUser(req, db) {
+export async function currentUser(req, tenant, root = null) {
   const p = unsign(readCookie(req));
-  if (!p?.account) return null;
 
-  const account = await db.get("account", p.account);
-  if (!account) return null;
-  const person = await db.get("person", account.person);
-  /* ⚠ נבדק בכל בקשה: כיבוי `active` מנתק מיד ולא בכניסה הבאה. */
-  if (!person || person.active === false) return null;
+  /* ⚠⚠ **אסימון של מכינה אחרת אינו סשן — הוא כלום.**
+     בלי השורה הזו, עוגייה שנשלחה (בטעות או בכוונה) לנתיב
+     של מכינה אחרת הייתה נקראת שם כמזהה חשבון מקומי. */
+  if (p?.account && p.tenant === tenant.slug) {
+    const account = await tenant.db.get("account", p.account);
+    if (account) {
+      const person = await tenant.db.get("person", account.person);
+      /* ⚠ נבדק בכל בקשה: כיבוי `active` מנתק מיד ולא בכניסה הבאה. */
+      if (person && person.active !== false) {
+        const roles = (await tenant.db.list("roleAssignment", { where: { person: person.id } }))
+          .map((r) => r.role);
+        return {
+          accountId: account.id,
+          personId: person.id,
+          name: person.name,
+          kind: person.kind,
+          roles,
+          viewOnly: Boolean(account.viewOnly),
+          isStaff: person.kind === "staff",
+          isRoot: false,
+        };
+      }
+    }
+  }
 
-  const roles = (await db.list("roleAssignment", { where: { person: person.id } }))
-    .map((r) => r.role);
+  /* ============================================================
+     ⚠⚠⚠ מנהל-על בתוך מכינה
+     ------------------------------------------------------------
+     הקונסולה חייבת דרך להיכנס לאפליקציה של מכינה — אחרת
+     «תמיכה» פירושה לבקש ממנהל המכינה את הסיסמה שלו, וזה
+     גרוע בהרבה מכל דבר שכתוב כאן.
 
-  return {
-    accountId: account.id,
-    personId: person.id,
-    name: person.name,
-    kind: person.kind,
-    roles,
-    viewOnly: Boolean(account.viewOnly),
-    isStaff: person.kind === "staff",
-  };
+     שלוש החלטות שמחזיקות את זה:
+
+     1. **הוא אינו מתחזה לאדם.** `personId` הוא `null`, השם
+        הוא «מנהל-על», ושום שורה בלוח לא תיחתם בשמו של מישהו
+        אחר. מערכת שבה התמיכה נכנסת כ«דוד» מייצרת יומן
+        שמשקר על מי עשה מה.
+
+     2. **זה נראה במסך.** האפליקציה מציגה רצועה קבועה. מי
+        שלא רואה שהוא במצב הזה ישכח שהוא בו, ויערוך נתונים
+        אמיתיים בטוחים שהוא ב«דמו».
+
+     3. **זה נרשם.** הכניסה נחתמת ביומן שהקונסולה מציגה.
+        ⚠ ומה שעדיין חסר, ונאמר במפורש: **המכינה עצמה אינה
+        רואה את היומן הזה.** ביום שיהיה לקוח משלם זו דרישה
+        ולא נחמדות, והמקום היחיד לתקן הוא כאן.
+     ============================================================ */
+  if (root) {
+    return {
+      accountId: null,
+      personId: null,
+      name: "מנהל-על",
+      kind: "staff",
+      roles: [],
+      viewOnly: false,
+      isStaff: true,
+      isRoot: true,
+      rootUser: root.username,
+    };
+  }
+
+  return null;
+}
+
+/**
+ * אילו מסכים פתוחים למשתמש הזה.
+ *
+ * ⚠⚠ **המקום היחיד שמכריע.** ארבעה קוראים שואלים את השאלה
+ *   הזו — השער, הניווט, הכניסה ו-`me` — וכל אחד מהם שחישב
+ *   אותה בעצמו היה מתפצל ביום שנוסף מקרה. זה בדיוק הלקח של
+ *   «מסך של בעל תפקיד זהה למסך של המנהל»: שתי מעטפות שבנו
+ *   את הניווט בנפרד, ושתיהן «עבדו».
+ *
+ * ⚠ **מנהל-על מקבל `*`** — הוא אינו נושא תפקידים במכינה, ובלי
+ *   השורה הזו הוא היה נכנס למכינה ומקבל תפריט **ריק**: גישה
+ *   מלאה בשרת, ואפס מסכים במסך.
+ */
+export function screensOf(profile, user) {
+  if (!user) return [];
+  if (user.isRoot) return ["*"];
+  return screensFor(profile, user.roles);
 }
 
 export class AuthError extends Error {
@@ -156,6 +237,10 @@ export function guard(handler, { screen = null, staffOnly = false } = {}) {
     const { user, req } = ctx;
     if (!user) throw new AuthError("יש להתחבר");
 
+    /* ⚠ מנהל-על עובר את שער המסכים ו**אינו** עובר את
+       `viewOnly` — הוא פשוט לעולם אינו כזה. */
+    if (user.isRoot) return handler(ctx);
+
     if (user.viewOnly && req.method !== "GET") {
       throw new AuthError("החשבון שלך בצפייה בלבד", 403);
     }
@@ -163,8 +248,7 @@ export function guard(handler, { screen = null, staffOnly = false } = {}) {
       throw new AuthError("הפעולה שמורה לצוות", 403);
     }
     if (screen) {
-      const { screensFor } = await import("../core/vocab.js");
-      const allowed = screensFor(ctx.profile, user.roles);
+      const allowed = screensOf(ctx.profile, user);
       if (!allowed.includes("*") && !allowed.includes(screen)) {
         throw new AuthError("אין לך גישה למסך הזה", 403);
       }

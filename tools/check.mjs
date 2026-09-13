@@ -18,7 +18,8 @@ import { fileURLToPath } from "node:url";
 import { ENTITIES, ENUMS, references, schemaModules } from "../core/schema.js";
 import { MODULES, VOCAB_KEYS, resolveProfile, validateProfile, STRUCTURE } from "../core/profile.js";
 import PREMIL from "../core/presets/premil.js";
-import { ROUTES } from "../server/routes/index.js";
+import { ROUTES, ADMIN_ROUTES } from "../server/routes/index.js";
+import { SLUG_RE, slugProblem, suggestSlug } from "../server/tenants.js";
 import { MODULE_CATALOG, ROLE_CATALOG, activeModules, activeScreens, roleScreens } from "../core/catalog.js";
 import { PARSERS } from "../core/import.js";
 
@@ -167,12 +168,104 @@ for (const f of readdirSync(join(ROOT, "client"))) {
    ============================================================ */
 section("צבעים מהאפיון");
 
-const css = readFileSync(join(ROOT, "client/styles.js"), "utf8");
-const block = css.slice(css.indexOf("export const CSS"), css.lastIndexOf("`"));
-const afterRoot = block.slice(block.indexOf("}", block.indexOf(":root{")));
-const hexes = afterRoot.match(/#[0-9a-fA-F]{6}\b/g) || [];
-ok(hexes.length === 0,
-  `יש ${hexes.length} צבעי הקס מחוץ ל-:root ב-styles.js — ${[...new Set(hexes)].join(" ")}`);
+/* ⚠ **כל קובץ עיצוב ולא רק styles.js.** הקונסולה הביאה
+   `console-styles.js`, וכלל שמכיר קובץ אחד בשם הוא כלל
+   שהקובץ הבא חומק ממנו בשקט. */
+for (const f of readdirSync(join(ROOT, "client")).filter((x) => /styles\.js$/.test(x))) {
+  const css = readFileSync(join(ROOT, "client", f), "utf8");
+  const block = css.slice(css.indexOf("export const"), css.lastIndexOf("`"));
+  const afterRoot = block.slice(block.indexOf("}", block.indexOf(":root{")));
+  const hexes = afterRoot.match(/#[0-9a-fA-F]{6}\b/g) || [];
+  ok(hexes.length === 0,
+    `יש ${hexes.length} צבעי הקס מחוץ ל-:root ב-${f} — ${[...new Set(hexes)].join(" ")}`);
+
+  /* ⚠⚠ **משתנה CSS שנקרא ואינו מוגדר אינו שגיאה** — `var()`
+     נפתר ל«כלום», הרקע יוצא שקוף, וזה חי חודשים במערכת
+     הקודמת פעמיים (`--sand` ואז `--navy`). */
+  const root = block.slice(block.indexOf(":root{"), block.indexOf("}", block.indexOf(":root{")));
+  const defined = new Set((root.match(/--[a-z0-9-]+(?=\s*:)/g) || []));
+  for (const used of new Set(block.match(/var\(\s*(--[a-z0-9-]+)/g) || [])) {
+    const name = used.replace(/var\(\s*/, "");
+    ok(defined.has(name), `${f}: ‎${name}‎ בשימוש ואינו מוגדר ב-:root`);
+  }
+}
+
+/* ============================================================
+   7א. הגבול בין מכינות
+   ------------------------------------------------------------
+   ⚠⚠⚠ **זו הבדיקה הקריטית ביותר במאגר.** עד לקונסולה, פריסה
+     שווה מכינה וכל מצב גלובלי היה נכון. מרגע שיש מרשם, מצב
+     ברמת המודול פירושו שמכינה אחת רואה — או **כותבת** —
+     את הנתונים של אחרת, ואיש לא יבין למה.
+   ============================================================ */
+section("הגבול בין מכינות");
+
+{
+  /* ⚠ כל נקודת קצה של הקונסולה חייבת `rootGuard`, חוץ
+     מארבע הפתוחות במפורש. אותו כלל של `guard`, בשער השני. */
+  const OPEN_ADMIN = new Set(["admin/state", "admin/setup", "admin/login", "admin/logout"]);
+  for (const [path, methods] of Object.entries(ADMIN_ROUTES)) {
+    ok(Object.keys(methods).length > 0, `${path}: אין אף שיטה`);
+    if (OPEN_ADMIN.has(path)) continue;
+    const line = routeSrc.split("\n").find((l) => l.includes(`"${path}"`));
+    ok(Boolean(line && line.includes("rootGuard(")),
+      `נקודת קצה של הקונסולה בלי rootGuard: ${path}`);
+  }
+
+  /* ⚠⚠ **שתי המפות זרות זו לזו.** נתיב שמופיע בשתיהן היה
+     נגיש גם דרך `/api/admin/` וגם דרך `/m/<slug>/api/`,
+     כלומר שער אחד היה עוקף את השני. */
+  for (const p of Object.keys(ADMIN_ROUTES)) {
+    ok(!(p in ROUTES), `${p} מופיע גם במפת המכינה וגם במפת הקונסולה`);
+  }
+  for (const p of Object.keys(ROUTES)) {
+    ok(!p.startsWith("admin/"), `${p} במפת המכינה ומתחיל ב-admin/`);
+  }
+
+  /* ⚠⚠ **אין מצב ברמת המודול בשרת של המכינה.** הדפוס שנאסר:
+     `let x = …` או `const cache = new Map()` בקובץ נתיב.
+     המטמון היחיד שמותר יושב על אובייקט המכינה. */
+  for (const f of readdirSync(join(ROOT, "server/routes"))) {
+    if (!/\.js$/.test(f)) continue;
+    const src = readFileSync(join(ROOT, "server/routes", f), "utf8");
+    const bad = (src.match(/^(?:let|var)\s+\w+/gm) || []);
+    ok(bad.length === 0,
+      `server/routes/${f}: יש מצב ברמת המודול (${bad.join(", ")}) — ` +
+      "מרגע שיש קונסולה זה מצב משותף בין מכינות");
+  }
+
+  /* ⚠ הדלתא והמסד מגיעים מ-`ctx.tenant` בלבד. ייבוא ישיר
+     של מנוע או של קובץ נתונים מקובץ נתיב הוא בדיוק הדרך
+     שבה מכינה אחת כותבת לשנייה. */
+  for (const f of readdirSync(join(ROOT, "server/routes"))) {
+    if (!/\.js$/.test(f) || f === "index.js") continue;
+    const src = readFileSync(join(ROOT, "server/routes", f), "utf8");
+    ok(!/from\s+"\.\.\/data\/file-engine\.js"/.test(src),
+      `server/routes/${f}: מייבא את המנוע ישירות — המסד מגיע מ-ctx.tenant`);
+  }
+
+  /* ⚠⚠ **ה-slug של הלקוח וה-slug של השרת הם אותו כלל.**
+     שתי הגדרות מקבילות מתפצלות בתיקון הראשון, ואז המסך
+     מאשר מזהה שהשרת דוחה. */
+  const apiSrc = readFileSync(join(ROOT, "client/api.js"), "utf8");
+  ok(/\/m\/\$\{slug\}\/api\//.test(apiSrc),
+    "client/api.js אינו מקדים את המכינה לכתובת");
+  ok(/\/api\/admin\//.test(apiSrc),
+    "client/api.js אינו מכיר את הדלת של הקונסולה");
+
+  for (const good of ["demo", "ein-prat", "meitarim", "a1b"]) {
+    ok(SLUG_RE.test(good) && !slugProblem(good), `slug תקין נדחה: ${good}`);
+  }
+  /* ⚠ שמות שמורים: מכינה בשם `api` או `console` הייתה מתנגשת
+     בנתיב עצמו — כלומר מכינה שאי אפשר להיכנס אליה, בלי שום
+     שגיאה. */
+  for (const bad of ["api", "console", "admin", "m", "AB", "a", "-x", "x-", "a_b", ""]) {
+    ok(Boolean(slugProblem(bad)), `slug פסול התקבל: «${bad}»`);
+  }
+  ok(suggestSlug("מכינת מיתרים לכיש") === "",
+    "הצעת slug משם עברי חייבת להחזיר ריק ולא מחרוזת מקרית");
+  ok(suggestSlug("Ein Prat") === "ein-prat", "הצעת slug משם לטיני נשברה");
+}
 
 /* ============================================================
    8. הקטלוג עומד בפני עצמו

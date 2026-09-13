@@ -30,7 +30,12 @@ export function App() {
   const [booting, setBooting] = useState(true);
   const [failed, setFailed] = useState(null);
   const [notice, setNotice] = useState(null);
-  const [screen, setScreen] = useState("home");
+  /* ⚠ `?screen=` נקרא **פעם אחת בטעינה**. הקונסולה פותחת
+     ישירות את הסטודיו של מכינה, וקישור ששולחים לעצמך צריך
+     לנחות במקום הנכון. אחרי הטעינה הניווט הוא state רגיל —
+     סנכרון דו-כיווני עם הכתובת היה עולה יותר משהוא שווה כאן. */
+  const [screen, setScreen] = useState(
+    () => new URLSearchParams(window.location.search).get("screen") || "home");
   const [drawer, setDrawer] = useState(false);
 
   /* ⚠ המותג נטען **לפני** הכניסה: מסך כניסה בלי שם המכינה
@@ -97,6 +102,11 @@ export function App() {
     return <><style>{CSS}</style>
       <Header brand={brand} user={user} onOut={onOut} />
       <main className="wrap" style={{ padding: "18px 16px 60px" }}>
+        {user.isRoot && (
+          <div className="banner err">
+            אתה כאן כ<b>מנהל-על</b> ולא כאיש צוות של המכינה.
+          </div>
+        )}
         <Studio onDone={() => { setBooting(true); boot(); }} />
       </main>
     </>;
@@ -121,6 +131,16 @@ export function App() {
       )}
 
       <main className="wrap" style={{ padding: "18px 16px 60px" }}>
+        {/* ⚠⚠ **מי שנכנס כמנהל-על חייב לראות את זה בכל מסך.**
+            בלי הרצועה הוא ישכח שהוא בו ויערוך נתונים אמיתיים
+            בטוח שהוא בדמו. ראו server/auth.js. */}
+        {user.isRoot && (
+          <div className="banner err">
+            אתה כאן כ<b>מנהל-על</b> ולא כאיש צוות של המכינה. כל שינוי נוגע
+            בנתונים אמיתיים, והכניסה נרשמה ביומן.
+          </div>
+        )}
+
         {user.viewOnly && (
           <div className="banner info">
             החשבון שלך בצפייה בלבד — אפשר לראות הכול ולא לשנות
@@ -160,14 +180,20 @@ function Header({ brand, user, onOut, onMenu }) {
     <header className="top">
       <div className="wrap">
         <div>
-          <div className="nm">{brand?.name || "מכינות"}</div>
+          {/* ⚠ כשהאפיון עוד ריק אין `name`, ואז מוצג השם
+              שבמרשם — «מכינות» לבדו נראה כמו מסך של אף אחד. */}
+          <div className="nm">{brand?.name || brand?.registryName || "מכינות"}</div>
           <div className="sub">
             {user.name}{user.roleLabels?.length ? " · " + user.roleLabels.join(" · ") : ""}
           </div>
         </div>
         <div className="grow" />
         {onMenu && <button onClick={onMenu}>תפריט</button>}
-        <button onClick={onOut}>יציאה</button>
+        {/* ⚠ מנהל-על אינו «יוצא» — הוא חוזר לקונסולה. כפתור
+            יציאה היה מנקה עוגייה שאינה שלו ומשאיר אותו תקוע. */}
+        {user.isRoot
+          ? <button onClick={() => { window.location.href = "/console"; }}>לקונסולה</button>
+          : <button onClick={onOut}>יציאה</button>}
       </div>
     </header>
   );

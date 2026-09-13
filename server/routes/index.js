@@ -21,6 +21,7 @@ import * as session from "./session.js";
 import * as profile from "./profile.js";
 import * as people from "./people.js";
 import * as attendance from "./attendance.js";
+import * as requests from "./requests.js";
 import * as studio from "./studio.js";
 import * as nav from "./nav.js";
 
@@ -65,6 +66,19 @@ export const ROUTES = {
   "attendance/day": { GET: guard(attendance.day, { screen: "attendance" }) },
   "attendance/mark": { POST: guard(attendance.mark, { screen: "attendance" }) },
   "attendance/summary": { GET: guard(attendance.mySummary) },
+
+  /* ---------- בקשות יציאה ----------
+     ⚠ אותו `screen` לשני הקהלים, וההבחנה **בתוך** ההנדלר:
+     החניך רואה את שלו, הצוות רואה את כולן, ורק מי שהשלב
+     שלו מכריע. שני מסכים היו מייצרים שתי רשימות שמתפצלות. */
+  "requests/list": { GET: guard(requests.list, { screen: "requests" }) },
+  "requests/create": { POST: guard(requests.create, { screen: "requests" }) },
+  "requests/update": { PUT: guard(requests.update, { screen: "requests" }) },
+  "requests/delete": { POST: guard(requests.remove, { screen: "requests" }) },
+  /* ⚠ **אינו `staffOnly`** — שער `withAuth` אינו יכול לבטא
+     «המדריך של החניך הזה **או** ראש המכינה», והוא נבדק
+     בהנדלר מול השלב שהבקשה נמצאת בו. */
+  "requests/decide": { POST: guard(requests.decide, { screen: "requests" }) },
 };
 
 /* ============================================================

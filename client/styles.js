@@ -279,6 +279,73 @@ textarea:focus{background:var(--surface); border-color:var(--accent); outline:no
 .pl h3{margin:0 0 8px}
 .pl .why{color:var(--muted); max-width:46ch; margin:0 auto 12px}
 
+/* ============================================================
+   מה שנוסף עם מסכי התוכן
+   ------------------------------------------------------------
+   ⚠⚠ **אין בקטיקים בקובץ הזה.** הוא כולו מחרוזת תבנית אחת,
+     ובקטיק בהערת CSS **סוגר אותה** והשארית הופכת לקוד. זה
+     נתפס כאן בבנייה, ובמערכת הקודמת זה קרה חמש פעמים —
+     ובאחת מהן הבנייה דיווחה הצלחה בעוד הדפדפן נשבר.
+     npm run check סופר אותם ונכשל על כל תוספת.
+
+   ⚠ טוקנים בלבד, בלי הקס — הצבעים מגיעים מהאפיון של המכינה.
+
+   ⚠ .banner.ok לצד .banner.ok-b שכבר היה: השם הישן נשאר
+     כדי לא לשבור מסכים קיימים, והחדש הוא מה שנכתב מעכשיו.
+   ============================================================ */
+.banner.ok{background:var(--ok-soft); color:var(--ok); font-weight:600}
+
+.pill.ok{background:var(--ok-soft); color:var(--ok)}
+.pill.warn{background:var(--warn-soft); color:var(--warn)}
+.pill.bad{background:var(--bad-soft); color:var(--bad)}
+.pill.plain{background:var(--sand); color:var(--muted)}
+
+.btn.sm{padding:7px 13px; font-size:14px; box-shadow:none}
+.btn:disabled{opacity:.5; cursor:not-allowed}
+
+/* ⚠ שורת פעולות שאינה משטח. .row כבר תפוסה למשטח מוקף
+   מסגרת, ולכן שם אחר ולא עוד וריאציה שלה. */
+.line{display:flex; align-items:center; gap:8px; flex-wrap:wrap}
+.line .grow{flex:1; min-width:0}
+
+/* ⚠ .field label כבר קיים; span הוא אותו דבר, כי כל רכיב
+   חדש נכתב עם label+span — ושתי צורות לאותו דבר הן בדיוק
+   איך שעיצוב מתפצל. */
+.field>span{display:block; font-size:14px; color:var(--muted);
+  margin-bottom:6px; font-weight:600}
+.field textarea, .field select{
+  width:100%; padding:13px 15px; border-radius:var(--r-md);
+  border:1px solid var(--line); background:var(--sand); color:var(--ink);
+  font-family:inherit; font-size:15px;
+}
+.hint{font-size:13px; color:var(--faint); margin-top:5px}
+
+/* ⚠ טבלת פריטים: שורה שנקראת בסריקה, לא כרטיס לכל דבר.
+   105 פריטי מלאי ככרטיסים הם עשרה מסכי גלילה. */
+.item{
+  display:flex; align-items:center; gap:10px;
+  background:var(--surface); border:1px solid var(--line);
+  border-radius:var(--r-md); padding:10px 14px; margin-bottom:6px;
+}
+.item .nm{font-weight:600; flex:1; min-width:0}
+.item .qty{font-variant-numeric:tabular-nums; font-weight:700; min-width:56px;
+  text-align:center}
+.item.low{border-color:var(--bad); background:var(--bad-soft)}
+.item.bought{opacity:.5}
+
+/* ⚠ פס כמות מול יעד. מספר לבדו אינו נקרא ברשימה של מאה. */
+.mini-bar{height:5px; border-radius:999px; background:var(--sand);
+  overflow:hidden; width:70px; flex:none}
+.mini-bar>i{display:block; height:100%; background:var(--ok)}
+.mini-bar.low>i{background:var(--bad)}
+
+.stepper{display:flex; align-items:center; gap:4px}
+.stepper button{
+  width:34px; height:34px; border-radius:var(--r-sm); cursor:pointer;
+  border:1px solid var(--line); background:var(--surface); font-weight:700;
+}
+.stepper button:hover{border-color:var(--accent)}
+
 @media (prefers-reduced-motion: reduce){
   *{animation:none !important; transition:none !important}
 }

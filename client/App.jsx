@@ -20,6 +20,7 @@ import { Login } from "./Login.jsx";
 import { Home } from "./Home.jsx";
 import { People } from "./People.jsx";
 import { Attendance } from "./Attendance.jsx";
+import { Requests } from "./Requests.jsx";
 import { Studio } from "./Studio.jsx";
 import { Placeholder } from "./Placeholder.jsx";
 
@@ -212,6 +213,7 @@ function Screen({ k, user, brand, nav, go, reboot }) {
     case "home": return <Home user={user} brand={brand} nav={nav} go={go} />;
     case "people": return <People />;
     case "attendance": return <Attendance />;
+    case "requests": return <Requests />;
     case "settings": return <Studio onDone={reboot} embedded />;
     default: return <Placeholder k={k} nav={nav} />;
   }

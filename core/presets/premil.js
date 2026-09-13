@@ -81,6 +81,9 @@ export const PREMIL = {
     staffOnly: Boolean(r.staffOnly),
     admin: Boolean(r.admin),
     viewOnly: Boolean(r.viewOnly),
+    /* ⚠ `base` עובר לפרופיל — הוא מה שהופך את התפקיד לנישא
+       על ידי כולם. ראו ROLE_CATALOG.member. */
+    base: Boolean(r.base),
     screens: r.all ? ["*"] : (r.screens || []),
   })),
 

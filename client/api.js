@@ -128,6 +128,14 @@ export const api = {
   /* ⚠ מצב רצוי ולא «הפוך» — שניים שמסמנים יחד מקבלים אותה
      תוצאה. ראו ההערה ב-server/routes/attendance.js. */
   mark: (date, marks) => call("attendance/mark", { method: "POST", body: { date, marks } }),
+
+  /* ---- בקשות יציאה ---- */
+  requests: () => call("requests/list"),
+  requestCreate: (f) => call("requests/create", { method: "POST", body: f }),
+  requestUpdate: (f) => call("requests/update", { method: "PUT", body: f }),
+  requestDelete: (id) => call("requests/delete", { method: "POST", body: { id } }),
+  requestDecide: (id, approve, charge) =>
+    call("requests/decide", { method: "POST", body: { id, approve, charge } }),
 };
 
 /* ============================================================

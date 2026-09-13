@@ -66,7 +66,17 @@ export function roleOpens(profile, slug, screen) {
 export function screensFor(profile, slugs = []) {
   const out = new Set();
   let all = false;
-  for (const s of slugs) {
+
+  /* ⚠⚠ **תפקידי הבסיס נישאים על ידי כולם ואינם מוענקים.**
+     בלעדיהם אדם בלי אף תפקיד רואה כלום — לא שגיאה, לא מסך
+     ריק מנוסח: פשוט ניווט בלי כלום. והם מגיעים **מהפרופיל**
+     ולא מרשימה בקוד, כדי שהמכינה תוכל לערוך אותם באשף. */
+  const carried = [
+    ...(profile?.roles || []).filter((r) => r.base).map((r) => r.slug),
+    ...slugs,
+  ];
+
+  for (const s of carried) {
     const r = role(profile, s);
     if (!r) continue;
     for (const sc of r.screens || []) {

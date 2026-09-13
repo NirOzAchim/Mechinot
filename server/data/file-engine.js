@@ -15,20 +15,35 @@
      שהוא המצב שאי אפשר להתאושש ממנו.
    ============================================================ */
 
-import { readFileSync, writeFileSync, existsSync, mkdirSync, renameSync } from "node:fs";
+import { readFileSync, writeFileSync, existsSync, mkdirSync, renameSync, statSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 
 export function fileEngine(file) {
   const path = resolve(file);
   let cache = null;
+  let stamp = 0;
 
   const empty = () => ({ seq: 1000, data: {} });
 
+  /* ⚠⚠ **המטמון נבדק מול זמן השינוי של הקובץ.**
+     בגרסה הראשונה הוא נטען פעם אחת וחי לנצח, ואז סקריפט
+     שכתב לקובץ בזמן שהשרת רץ היה בלתי נראה לחלוטין: המסך
+     הציג נתונים שכבר לא קיימים, ואיש לא היה מקשר את זה
+     לכלום. זה בדיוק «המטמון יושב בתהליך אחר», ובגרסה
+     הגרועה — כי כאן זה אותו קובץ.
+
+     ⚠ אינו פותר ריצה מקבילה של שני **כותבים**; המנוע הזה
+       מוצהר כזמני ולא לייצור. */
+  function fresh() {
+    try { return statSync(path).mtimeMs; } catch { return 0; }
+  }
+
   function load() {
-    if (cache) return cache;
-    if (!existsSync(path)) return (cache = empty());
+    if (cache && stamp === fresh()) return cache;
+    if (!existsSync(path)) { stamp = 0; return (cache = empty()); }
     try {
       cache = JSON.parse(readFileSync(path, "utf8"));
+      stamp = fresh();
       if (!cache.data) cache = empty();
     } catch {
       /* ⚠ קובץ פגום אינו «מסד ריק». זריקה כאן עדיפה על התחלה
@@ -44,6 +59,9 @@ export function fileEngine(file) {
     const tmp = path + ".tmp";
     writeFileSync(tmp, JSON.stringify(s, null, 2), "utf8");
     renameSync(tmp, path);
+    /* ⚠ אחרי כתיבה — לעדכן את החותמת, אחרת הקריאה הבאה
+       תחשוב שהקובץ השתנה מבחוץ ותטען אותו מחדש בכל פעם. */
+    stamp = fresh();
   }
 
   const table = (entity) => {

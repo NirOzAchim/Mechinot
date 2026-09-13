@@ -400,7 +400,7 @@ export const ENTITIES = {
 
   dutyShift: {
     title: "תורנות",
-    module: "duties",
+    module: "chores",
     fields: {
       id: id(),
       person: req("ref", { to: "person" }),
@@ -422,6 +422,382 @@ export const ENTITIES = {
       leaders: f("refs", { to: "person" }),
       summary: f("longtext"),
       handover: f("longtext"),
+    },
+  },
+
+  leadTask: {
+    title: "משימת הובלה",
+    module: "leadweek",
+    /* ⚠ שורה **בלי** `week` היא תבנית לכל השבועות; שורה **עם**
+       `week` היא משימה של אותו שבוע. אותה ישות, שני תפקידים —
+       ועמודת «בוצע» על התבנית הייתה נכונה לשבוע אחד ושקרית
+       לכל השאר. הביצוע הוא שורה נפרדת. */
+    fields: {
+      id: id(),
+      title: req("text"),
+      week: f("ref", { to: "leadWeek" }),
+      order: f("int"),
+    },
+  },
+
+  leadTick: {
+    title: "ביצוע משימת הובלה",
+    module: "leadweek",
+    /* ⚠ **קיום שורה = בוצע.** אין עמודת «בוצע», וביטול הוא
+       מחיקה — ולכן אין מצב שלישי שקוף שבו השורה קיימת
+       ומסומנת «לא». */
+    fields: {
+      id: id(),
+      task: req("ref", { to: "leadTask" }),
+      week: req("ref", { to: "leadWeek" }),
+      by: f("ref", { to: "person" }),
+      at: f("datetime"),
+    },
+  },
+
+  /* ---------- מטבח ---------- */
+
+  dish: {
+    title: "מנה",
+    module: "menu",
+    /* ⚠ מנה נשמרת **לכמות אנשים אחת**, וכל כמות אחרת היא
+       הכפלה. אחסון של כל וריאציה היה מייצר עותקים שמתיישנים
+       בנפרד. */
+    fields: {
+      id: id(),
+      name: req("text"),
+      servings: req("int", { default: 35 }),
+      notes: f("longtext"),
+    },
+  },
+
+  dishItem: {
+    title: "מצרך במנה",
+    module: "menu",
+    fields: {
+      id: id(),
+      dish: req("ref", { to: "dish" }),
+      name: req("text"),
+      /* ⚠ `null` הוא «לפי הטעם» ולא אפס — מצרך כזה אינו מוכפל
+         ואינו נבדק מול המלאי. */
+      qty: f("decimal"),
+      unit: f("text"),
+    },
+  },
+
+  menuSlot: {
+    title: "משבצת בתפריט",
+    module: "menu",
+    /* ⚠ התפריט חוזר על עצמו ואינו תלוי בתאריך: «יום שני,
+       ארוחת ערב» הוא התפריט של כל יום שני. זו שאלה אחרת
+       מ«מה בישלנו ב-14.9». */
+    fields: {
+      id: id(),
+      weekday: req("int", { min: 0, max: 6 }),
+      meal: req("text"),
+      dish: f("ref", { to: "dish" }),
+      items: f("longtext", { note: "טקסט חופשי — לחם, גבינות" }),
+    },
+  },
+
+  budgetDay: {
+    title: "יום בתקציב",
+    module: "budget",
+    fields: {
+      id: id(),
+      date: req("date", { unique: true }),
+      dayType: f("text"),
+      /* ⚠ יום יכול לשאת **שני** סוגים, והסכומים מתחברים —
+         «שגרה + אחר» הוא יום שגרה שקרה בו עוד משהו. */
+      dayType2: f("text"),
+      manualCost: f("decimal", { note: "דורס את שניהם" }),
+      diners: f("int", { note: "ריק = לא נספר, 0 = אף אחד" }),
+    },
+  },
+
+  purchase: {
+    title: "קנייה",
+    module: "budget",
+    fields: {
+      id: id(),
+      date: req("date"),
+      amount: req("decimal"),
+      what: f("text"),
+      months: f("int", { default: 1, note: "על כמה חודשים נפרס" }),
+    },
+  },
+
+  /* ---------- תורנויות ---------- */
+
+  choreTask: {
+    title: "מטלה בצ׳ק ליסט",
+    module: "chores",
+    fields: {
+      id: id(),
+      title: req("text"),
+      area: f("text"),
+      sector: f("text"),
+      /* ⚠ רשימה ריקה = כל יום, ולא אף יום. */
+      days: f("json"),
+      when: f("text"),
+      archived: f("bool", { default: false }),
+    },
+  },
+
+  choreTick: {
+    title: "ביצוע מטלה",
+    module: "chores",
+    /* ⚠ קיום שורה = בוצע, ואידמפוטנטי: שני תורנים שלוחצים
+       כמעט יחד שולחים אותה כוונה ומקבלים אותה תוצאה. */
+    fields: {
+      id: id(),
+      task: req("ref", { to: "choreTask" }),
+      date: req("date"),
+      by: f("ref", { to: "person" }),
+      at: f("datetime"),
+    },
+  },
+
+  choreAdjust: {
+    title: "תיקון ספירת תורנויות",
+    module: "chores",
+    /* ⚠ **שורה ולא מספר שנדרס.** «היה כצופר» ו«התחלף עם מישהו»
+       הם שני אירועים, וכל אחד ראוי לסיבה משלו. */
+    fields: {
+      id: id(),
+      person: req("ref", { to: "person" }),
+      delta: req("int"),
+      reason: f("text"),
+      at: f("datetime"),
+    },
+  },
+
+  /* ---------- בטיחות ואירוח ---------- */
+
+  safetyEvent: {
+    title: "אירוע בטיחות",
+    module: "safety",
+    fields: {
+      id: id(),
+      date: req("date"),
+      place: f("text"),
+      severity: f("text"),
+      detail: req("longtext"),
+      /* ⚠ דיווח להורים הוא חובה נפרדת מהדיווח לרשויות, והוא
+         הראשון בזמן — ולכן שדה משלו. */
+      parentsNotified: f("bool", { default: false }),
+      authoritiesNotified: f("bool", { default: false }),
+      lessons: f("longtext"),
+      by: f("ref", { to: "person" }),
+    },
+  },
+
+  hosting: {
+    title: "אירוח קבוצה",
+    module: "safety",
+    fields: {
+      id: id(),
+      groupName: req("text"),
+      fromDate: req("date"),
+      toDate: f("date"),
+      heads: f("int"),
+      paid: f("bool", { default: false }),
+      /* ⚠ «תשלום» ו«סכום» הם שני שדות: אירוח בתשלום שהסכום בו
+         טרם סוכם הוא מצב רגיל, וסכום 0 היה נראה כמו חינם. */
+      amount: f("decimal"),
+      cancelled: f("bool", { default: false }),
+      contact: f("text"),
+      notes: f("longtext"),
+    },
+  },
+
+  /* ---------- חדר כביסה ---------- */
+
+  laundrySlot: {
+    title: "משבצת כביסה",
+    module: "laundry",
+    fields: {
+      id: id(),
+      person: req("ref", { to: "person" }),
+      date: req("date"),
+      startAt: req("time"),
+      /* ⚠ משך שנמחק בלוח מוצג כ«לא ידוע» ותופס חלון אחד —
+         ואינו הופך בשקט לשעה. */
+      minutes: f("int"),
+    },
+  },
+
+  /* ---------- לוח מודעות ---------- */
+
+  notice: {
+    title: "מודעה",
+    module: "board",
+    fields: {
+      id: id(),
+      title: req("text"),
+      body: f("longtext"),
+      kind: f("text", { default: "lost" }),
+      /* ⚠ הקהל הוא **הרשאת קריאה בשרת** ולא סינון בתצוגה:
+         מודעה לצוות אינה בגוף התשובה של חניך כלל. */
+      audience: f("text", { default: "all" }),
+      by: f("ref", { to: "person" }),
+      at: f("datetime"),
+      /* ⚠ תפוגה היא שדה ולא מחיקה — לוח שמוחק בעצמו אינו יכול
+         לענות על «מה בעצם נאמר אז». */
+      expiresAt: f("date"),
+      pinned: f("bool", { default: false }),
+    },
+  },
+
+  quote: {
+    title: "ציטוט",
+    module: "board",
+    fields: {
+      id: id(),
+      text: req("longtext"),
+      author: f("text"),
+      addedBy: f("ref", { to: "person" }),
+      at: f("datetime"),
+    },
+  },
+
+  /* ---------- צבא ובוגרים ---------- */
+
+  tryout: {
+    title: "מיון",
+    module: "army",
+    /* ⚠ **הבעלות אצל החניך.** `army` ו-`tryouts` תמיד מולאו על
+       ידו על עצמו, ועריכה מבחוץ הופכת את הנתון מ«מה שהחניך
+       מספר» ל«מה שהצוות רשם עליו». */
+    fields: {
+      id: id(),
+      person: req("ref", { to: "person" }),
+      unit: req("text"),
+      date: f("date"),
+      /* ⚠ «טרם ניגשתי» אינו «לא עברתי» — מצב שלישי, ומוצג
+         במפורש. הנוסח בגוף ראשון כי החניך הוא שממלא. */
+      status: f("text", { default: "not_yet" }),
+      notes: f("longtext"),
+    },
+  },
+
+  alumnus: {
+    title: "בוגר",
+    module: "army",
+    /* ⚠⚠ **בלי תעודות זהות, מידע רפואי או פרטי הורים.** הלוח
+       נועד לסטטיסטיקה על שירות, ואין לאף אחד מהשדות האלה
+       מקום בו. מי שיוסיף שדה — לשאול קודם למה. */
+    fields: {
+      id: id(),
+      name: req("text"),
+      cycle: f("text"),
+      corps: f("text"),
+      role: f("text"),
+      draftDate: f("date"),
+      /* ⚠ אחוזים מחושבים **מתוך מי שנשאל**. בוגר שטרם נשאל
+         אינו «לא יצא לקצונה». */
+      asked: f("bool", { default: false }),
+      officer: f("bool"),
+      commander: f("bool"),
+    },
+  },
+
+  recruitLead: {
+    title: "פניית גיוס",
+    module: "army",
+    fields: {
+      id: id(),
+      name: req("text"),
+      phone: f("text"),
+      email: f("text"),
+      source: f("text"),
+      message: f("longtext"),
+      /* ⚠ ריק = «חדשה». פנייה מטופס אינה נושאת סטטוס, והיא
+         בדיוק זו שממתינה. */
+      status: f("text"),
+      /* ⚠ «מי לקח» נרשם **בשם**, וזה ההפך מהכלל הרגיל ובמכוון:
+         זה אינו מעקב על חניך אלא «מי מדבר עם הבחור הזה»,
+         ובלעדיו שניים מתקשרים לאותו אדם. */
+      takenBy: f("ref", { to: "person" }),
+      at: f("datetime"),
+    },
+  },
+
+  /* ---------- פרויקטים ---------- */
+
+  project: {
+    title: "פרויקט",
+    module: "projects",
+    fields: {
+      id: id(),
+      name: req("text"),
+      owner: req("ref", { to: "person" }),
+      partners: f("refs", { to: "person" }),
+      goal: f("longtext"),
+      budget: f("decimal"),
+      archived: f("bool", { default: false }),
+    },
+  },
+
+  projectTask: {
+    title: "משימת פרויקט",
+    module: "projects",
+    fields: {
+      id: id(),
+      project: req("ref", { to: "project" }),
+      title: req("text"),
+      done: f("bool", { default: false }),
+      due: f("date"),
+    },
+  },
+
+  /* ---------- מליאות ותוכן ---------- */
+
+  plenary: {
+    title: "מליאה",
+    module: "content",
+    fields: {
+      id: id(),
+      title: req("text"),
+      date: req("date"),
+      agenda: f("longtext"),
+      /* ⚠ שלושה שדות ולא אחד: `agenda` מה שתכננו לפני,
+         `protocol` מה שנאמר בזמן — **ואינו יוצא לחניכים** —
+         ו-`summary` מה שמספרים אחרי, שהוא היחיד שנפתח לכולם. */
+      protocol: f("longtext", { private: true }),
+      summary: f("longtext"),
+      notesOpen: f("bool", { default: true }),
+      cancelled: f("bool", { default: false }),
+    },
+  },
+
+  plenaryNote: {
+    title: "פתק למליאה",
+    module: "content",
+    /* ⚠⚠ **אנונימי בהיעדר הנתון.** אין כאן עמודת כותב ולא
+       תהיה, המסלול בשרת אינו נוגע בזהות, והתשובה אינה מחזירה
+       מזהה שורה — מזהה שחוזר מופיע בלוג הרשת לצד הסשן ששלח
+       אותו. המחיר מוצהר במסך: אי אפשר למחוק ואי אפשר לערוך. */
+    fields: {
+      id: id(),
+      plenary: req("ref", { to: "plenary" }),
+      body: req("longtext"),
+      at: f("datetime"),
+    },
+  },
+
+  studentLesson: {
+    title: "שיעור חניך",
+    module: "content",
+    fields: {
+      id: id(),
+      person: req("ref", { to: "person" }),
+      date: req("date"),
+      kind: f("text", { default: "lesson" }),
+      subject: f("text"),
+      /* ⚠ «שובץ» ו«התקיים» הם שני דברים, ולכן שלושה מצבים ולא
+         שניים: התקיים · לא התקיים · טרם. */
+      happened: f("enum", { enum: "happened" }),
     },
   },
 };

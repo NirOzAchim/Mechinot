@@ -19,6 +19,8 @@ import { ENTITIES, ENUMS, references, schemaModules } from "../core/schema.js";
 import { MODULES, VOCAB_KEYS, resolveProfile, validateProfile, STRUCTURE } from "../core/profile.js";
 import PREMIL from "../core/presets/premil.js";
 import { ROUTES } from "../server/routes/index.js";
+import { MODULE_CATALOG, ROLE_CATALOG, activeModules, activeScreens, roleScreens } from "../core/catalog.js";
+import { PARSERS } from "../core/import.js";
 
 const ROOT = resolve(fileURLToPath(import.meta.url), "../..");
 let pass = 0, fail = 0;
@@ -171,6 +173,95 @@ const afterRoot = block.slice(block.indexOf("}", block.indexOf(":root{")));
 const hexes = afterRoot.match(/#[0-9a-fA-F]{6}\b/g) || [];
 ok(hexes.length === 0,
   `יש ${hexes.length} צבעי הקס מחוץ ל-:root ב-styles.js — ${[...new Set(hexes)].join(" ")}`);
+
+/* ============================================================
+   8. הקטלוג עומד בפני עצמו
+   ============================================================ */
+section("קטלוג המודולים");
+
+for (const [k, m] of Object.entries(MODULE_CATALOG)) {
+  ok(Boolean(m.title), `${k}: אין כותרת`);
+  /* ⚠ `why` הוא מה שמנהל מכינה קורא באשף לפני שהוא מחליט.
+     מודול בלי משפט כזה הוא שם טכני שאיש אינו יודע אם הוא
+     צריך אותו. */
+  ok(Boolean(m.why), `${k}: אין משפט «מה זה נותן»`);
+  ok(Array.isArray(m.screens) && m.screens.length > 0, `${k}: אין מסכים`);
+  for (const need of m.needs || []) {
+    ok(Boolean(MODULE_CATALOG[need]), `${k} תלוי במודול שאינו קיים: ${need}`);
+  }
+  for (const s2 of m.screens) ok(Boolean(s2.key && s2.title), `${k}: מסך בלי מפתח או כותרת`);
+}
+
+/* ⚠⚠ **מפתח מסך ייחודי על פני כל הקטלוג.** שני מודולים עם
+   אותו מפתח נותנים ניווט שמוביל למסך הלא-נכון, ושום דבר
+   אינו צועק. */
+{
+  const seen = new Map();
+  for (const [k, m] of Object.entries(MODULE_CATALOG))
+    for (const s2 of m.screens) {
+      ok(!seen.has(s2.key), `מפתח מסך כפול «${s2.key}» — ${seen.get(s2.key)} ו-${k}`);
+      seen.set(s2.key, k);
+    }
+}
+
+/* ⚠⚠ **תפקיד אינו מפנה למסך שאינו קיים בשום מודול.** זו
+   ההרשאה שאי אפשר להגיע אליה — נשברה פעם אחת בכל ועדה
+   במערכת הקודמת. */
+{
+  const all = new Set(Object.values(MODULE_CATALOG).flatMap((m) => m.screens.map((s2) => s2.key)));
+  for (const [slug, r] of Object.entries(ROLE_CATALOG))
+    for (const s2 of r.screens || [])
+      ok(s2 === "*" || all.has(s2), `התפקיד ${slug} מפנה למסך שאינו קיים: ${s2}`);
+}
+
+/* ⚠ כיבוי מודול משרשר: מודול שתלוי בכבוי חייב לכבות בעצמו,
+   אחרת המסך שלו נפתח וקורס על ישות שאינה קיימת. */
+{
+  const off = activeModules({ lessons: false, ratings: true });
+  ok(!off.includes("ratings"), "«דירוג מרצים» נשאר דלוק כשהשיעורים כבויים");
+  const on = activeModules({ lessons: true, ratings: true });
+  ok(on.includes("ratings"), "«דירוג מרצים» לא נדלק כשהכול דלוק");
+}
+
+/* ⚠ תפקיד שמסכיו נחתכו מקבל רשימה מקוצרת ולא מסך שנפתח ל-404 */
+{
+  const mods = { lessons: true, ratings: false };
+  const sc = roleScreens(ROLE_CATALOG.scheduler, mods);
+  ok(!sc.includes("evals"), "מסך של מודול כבוי נשאר בתפקיד");
+  ok(sc.includes("lessons"), "מסך של מודול דלוק נחתך בטעות");
+}
+
+/* ============================================================
+   9. הייבוא — מה שנתפס בצילום מסך, לא בבדיקה
+   ============================================================ */
+section("ייבוא בהדבקה");
+
+for (const [k, p2] of Object.entries(PARSERS)) {
+  ok(Boolean(p2.title && p2.hint && p2.example), `${k}: חסר הסבר או דוגמה`);
+  ok(Array.isArray(p2.columns) && p2.columns.length > 0, `${k}: אין עמודות לתצוגה`);
+  /* ⚠ הדוגמה חייבת להיקלט על ידי המפרסר של עצמה. דוגמה שאינה
+     עוברת היא מסך שמלמד את המשתמש פורמט שגוי. */
+  const r = p2.parse(p2.example);
+  ok(r.rows.length > 0, `${k}: הדוגמה שמוצגת למשתמש אינה נקלטת`);
+  ok(r.bad.length === 0, `${k}: הדוגמה מייצרת שורות דחויות`);
+}
+
+{
+  const r = PARSERS.students.parse("עומר דגן\t312990001\tבן\n???\n---\n  \nאורי שחם,312990002,בת");
+  ok(r.rows.length === 2, `שורת זבל נקלטה כשם — נקלטו ${r.rows.length} במקום 2`);
+  ok(r.bad.length === 2, `שורות הזבל לא דווחו — ${r.bad.length} במקום 2`);
+  ok(r.rows[0].phone === null, "טלפון חסר הפך למשהו שאינו null");
+  ok(r.rows[1].gender === "female", "«בת» לא זוהה כנקבה");
+  /* ⚠ טאב ופסיק באותה הדבקה — מנהל מכינה מדביק משני מקורות. */
+  ok(r.rows[1].name === "אורי שחם", "שורה מופרדת בפסיק לא נקלטה");
+}
+{
+  /* ⚠ 31/02 עובר את הביטוי הרגולרי ואינו תאריך קיים. */
+  const r = PARSERS.calendar.parse("31/02/2026\tרגיל\n01/09/2026 - 03/09/2026\tסדרה");
+  ok(r.bad.length === 1, "תאריך שאינו קיים לא נדחה");
+  ok(r.rows.length === 3, `טווח לא נפרש לשלושה ימים — ${r.rows.length}`);
+  ok(r.rows.every((x) => x.kind === "series"), "סוג היום לא הוחל על כל הטווח");
+}
 
 /* ---------- סיכום ---------- */
 console.log("");

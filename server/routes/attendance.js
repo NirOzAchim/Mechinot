@@ -158,3 +158,9 @@ export async function summarize(db, profile, personId) {
     needMore: marked >= min ? 0 : min - marked,
   };
 }
+
+/** הסיכום של המשתמש על עצמו */
+export async function mySummary({ db, profile, user }) {
+  const s = await summarize(db, profile, user.personId);
+  return { summary: s, quota: profile.year?.vacationQuota ?? null };
+}

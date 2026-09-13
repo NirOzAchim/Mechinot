@@ -10,6 +10,8 @@
      להיות תבנית.
    ============================================================ */
 
+import { ROLE_CATALOG, MODULE_CATALOG, allModules } from "../catalog.js";
+
 export const preset = "premil";
 
 export const PREMIL = {
@@ -67,45 +69,31 @@ export const PREMIL = {
   },
 
   /* ---------- תפקידים ----------
-     ⚠ `screens` הוא מה שהתפקיד **פותח**, והוא מזין גם את
-       הניווט וגם את מסך ההרשאות. שתי רשימות מקבילות מתפצלות
-       בתיקון הראשון — זה קרה במערכת הקודמת בדיוק כך.
-     ⚠ `staffOnly` מבדיל בין תפקיד שחניך נושא לבין כניסת צוות. */
-  roles: [
-    { slug: "head", label: "ראש המכינה", staffOnly: true, admin: true,
-      screens: ["*"] },
-    { slug: "guide", label: "מדריך", staffOnly: true,
-      screens: ["home", "people", "attendance", "requests", "lessons", "mygroup"] },
-    { slug: "staff", label: "איש צוות", staffOnly: true,
-      screens: ["home", "people", "attendance", "requests", "lessons"] },
+     ⚠⚠ **נגזרים מ-ROLE_CATALOG ואינם נכתבים כאן שוב.** שתי
+       רשימות מקבילות מתפצלות בתיקון הראשון — במערכת הקודמת
+       זה קרה בדיוק כך בין המגירה לבין מרכז התפקיד, ועיקרון
+       «מסך של בעל תפקיד זהה למסך של המנהל» נשבר בשקט.
 
-    { slug: "scheduler", label: "אחראי לו״ז",
-      screens: ["home", "lessons", "courses"] },
-    { slug: "kitchen", label: "אחראי מטבח",
-      screens: ["home", "inventory", "shopping"] },
-    { slug: "storage", label: "אחראי מכולה",
-      screens: ["home", "inventory", "shopping"] },
-    { slug: "house", label: "אב בית",
-      screens: ["home", "faults", "duties"] },
-    { slug: "safety", label: "אחראי בטיחות",
-      screens: ["home", "faults"] },
-    { slug: "weeklead", label: "מוביל שבוע",
-      screens: ["home", "attendance", "leadweek"] },
-  ],
+     המכינה עורכת כאן שם ומסכים; המפתח נשאר לנצח. */
+  roles: Object.entries(ROLE_CATALOG).map(([slug, r]) => ({
+    slug,
+    label: r.label,
+    staffOnly: Boolean(r.staffOnly),
+    admin: Boolean(r.admin),
+    viewOnly: Boolean(r.viewOnly),
+    screens: r.all ? ["*"] : (r.screens || []),
+  })),
 
-  /* ---------- מודולים ---------- */
-  modules: {
-    attendance: true,
-    requests: true,
-    lessons: true,
-    teams: true,
-    inventory: true,
-    faults: true,
-    duties: true,
-    leadweek: true,
-    ratings: true,
-    board: false,
-  },
+  /* ---------- מודולים ----------
+     ⚠ **מכינה קדם-צבאית מקבלת כמעט הכול דלוק.** זה המוצר:
+       מי שקנה רוצה לראות מה יש, ולא מסך ריק שצריך להדליק בו
+       דברים אחד-אחד. מה שכבוי כאן כבוי כי הוא **אינו** נפוץ,
+       ולא כי הוא פחות חשוב. */
+  modules: Object.fromEntries(allModules().map((m) => [
+    m,
+    /* פרויקטים אישיים ומליאות אינם קיימים בכל מכינה */
+    !["projects", "content"].includes(m),
+  ])),
 
   /* ---------- השנה ---------- */
   year: {

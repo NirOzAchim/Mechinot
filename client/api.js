@@ -60,13 +60,27 @@ export const api = {
   login: (user, password) => call("session/login", { method: "POST", body: { user, password } }),
   logout: () => call("session/logout", { method: "POST" }),
 
+  /* ---- ניווט ----
+     ⚠ נבנה בשרת. המסך אינו מחשב מה מותר לו — ראו server/routes/nav.js. */
+  nav: () => call("nav"),
+
   /* ---- אפיון ---- */
   profile: () => call("profile/full"),
   saveProfile: (profile) => call("profile/update", { method: "PUT", body: { profile } }),
 
+  /* ---- הסטודיו ---- */
+  studio: () => call("studio/state"),
+  studioSave: (step, fields) => call("studio/save", { method: "PUT", body: { step, ...fields } }),
+  /* ⚠ שני מסלולים נפרדים ולא דגל: preview אינו כותב דבר. */
+  importPreview: (kind, text) => call("studio/preview", { method: "POST", body: { kind, text } }),
+  importCommit: (kind, text) => call("studio/commit", { method: "POST", body: { kind, text } }),
+  invite: (person, username) => call("studio/invite", { method: "POST", body: { person, username } }),
+
   /* ---- אנשים ---- */
   people: (kind = "student") => call(`people/list?kind=${encodeURIComponent(kind)}`),
   myProfile: () => call("people/me"),
+
+  summary: () => call("attendance/summary"),
 
   /* ---- נוכחות ---- */
   day: (date) => call(`attendance/day${date ? `?date=${date}` : ""}`),

@@ -164,6 +164,121 @@ h3{font-size:17px}
 .login .brand h1{font-size:24px}
 .login .brand p{margin:4px 0 0; color:var(--muted); font-size:15px}
 
+/* ============================================================
+   הסטודיו
+   ============================================================ */
+.steps{display:flex; gap:8px; overflow-x:auto; padding:4px 0 12px; scrollbar-width:thin}
+.stp{
+  display:flex; align-items:center; gap:8px; white-space:nowrap;
+  background:var(--surface); border:1px solid var(--line); border-radius:var(--r-md);
+  padding:9px 14px; cursor:pointer; box-shadow:var(--sh-1);
+}
+.stp.on{background:var(--accent); color:#fff; border-color:transparent}
+.stp .n{
+  width:22px; height:22px; border-radius:50%; display:grid; place-items:center;
+  background:var(--sand); color:var(--muted); font-size:12px; font-weight:700;
+}
+.stp.on .n{background:rgba(255,255,255,.22); color:#fff}
+.stp .req{font-size:11px; font-weight:700; color:var(--bad)}
+.stp.on .req{color:#fff; opacity:.9}
+.stp .ok{font-size:13px; color:var(--ok); font-weight:800}
+.stp.on .ok{color:#fff}
+
+.row-btns{display:flex; gap:10px; margin-top:16px; flex-wrap:wrap}
+.two{display:grid; grid-template-columns:1fr 1fr; gap:12px}
+@media (max-width:560px){.two{grid-template-columns:1fr}}
+
+textarea{
+  width:100%; padding:13px 15px; border-radius:var(--r-md);
+  border:1px solid var(--line); background:var(--sand); color:var(--ink);
+  font-family:inherit; font-size:15px; line-height:1.6; resize:vertical;
+}
+textarea:focus{background:var(--surface); border-color:var(--accent); outline:none}
+
+/* ---------- צבעים ---------- */
+.colors{display:grid; gap:8px}
+.col-row{display:flex; align-items:center; gap:12px; padding:8px 10px;
+  background:var(--sand); border-radius:var(--r-md)}
+.col-row input[type=color]{
+  width:42px; height:32px; padding:0; border:1px solid var(--line);
+  border-radius:var(--r-sm); background:none; cursor:pointer;
+}
+.col-row code{font-size:12px; color:var(--muted)}
+
+/* ---------- אוצר מילים ---------- */
+.vocab{display:grid; gap:6px}
+.vh,.vr{display:grid; grid-template-columns:1.3fr 1fr 1fr; gap:8px; align-items:center}
+.vh{font-size:12px; color:var(--faint); padding:0 4px}
+.vr code{font-size:11.5px; color:var(--muted); overflow:hidden; text-overflow:ellipsis}
+.vr input{padding:9px 11px; border-radius:var(--r-sm); border:1px solid var(--line);
+  background:var(--sand); color:var(--ink); width:100%}
+.vr input:focus{background:var(--surface); border-color:var(--accent); outline:none}
+@media (max-width:560px){
+  .vh{display:none}
+  .vr{grid-template-columns:1fr 1fr; gap:6px}
+  .vr code{grid-column:1 / -1}
+}
+
+/* ---------- תפקידים ---------- */
+.role{border:1px solid var(--line); border-radius:var(--r-md); padding:14px 16px;
+  margin-bottom:10px; background:var(--surface)}
+.role-head{display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin-bottom:10px}
+.role-name{font-weight:700; font-size:16px; padding:7px 11px; border-radius:var(--r-sm);
+  border:1px solid var(--line); background:var(--sand); color:var(--ink)}
+.role-head code{font-size:11.5px; color:var(--faint)}
+.chips{display:flex; flex-wrap:wrap; gap:6px}
+.chip{font-size:12.5px; padding:5px 11px; border-radius:999px; cursor:pointer;
+  border:1px solid var(--line); background:var(--surface); color:var(--muted)}
+.chip.on{background:var(--accent); color:#fff; border-color:transparent; font-weight:600}
+
+/* ---------- מודולים ---------- */
+.mods{display:grid; gap:10px; grid-template-columns:repeat(auto-fit,minmax(260px,1fr))}
+.mod{border:1px solid var(--line); border-radius:var(--r-md); padding:14px 16px;
+  background:var(--surface); opacity:.62; transition:opacity .12s var(--ease)}
+.mod.on{opacity:1; box-shadow:var(--sh-1)}
+.mod.blocked{opacity:.4}
+.mod-top{display:flex; align-items:center; gap:10px; cursor:pointer; margin-bottom:6px}
+.mod-top input{width:18px; height:18px; accent-color:var(--accent); cursor:pointer}
+.mod .why{margin:0; font-size:14px; color:var(--muted); line-height:1.55}
+.mod .faint{margin:6px 0 0}
+
+/* ---------- ייבוא ---------- */
+.segs{display:flex; gap:8px; overflow-x:auto; padding-bottom:10px}
+.seg{display:flex; align-items:center; gap:7px; white-space:nowrap; cursor:pointer;
+  background:var(--surface); border:1px solid var(--line); border-radius:var(--r-md);
+  padding:8px 14px; font-size:14.5px}
+.seg.on{background:var(--accent); color:#fff; border-color:transparent; font-weight:600}
+.seg .cnt{background:var(--sand); color:var(--muted); border-radius:999px;
+  padding:1px 7px; font-size:11.5px; font-weight:700}
+.seg.on .cnt{background:rgba(255,255,255,.22); color:#fff}
+
+.tbl{border:1px solid var(--line); border-radius:var(--r-md); overflow:hidden; margin:12px 0}
+.tr{display:grid; grid-template-columns:repeat(auto-fit,minmax(90px,1fr));
+  gap:10px; padding:9px 13px; font-size:14px; border-bottom:1px solid var(--line)}
+.tr:last-child{border-bottom:none}
+.tr.th{background:var(--sand); font-weight:700; font-size:12.5px; color:var(--muted)}
+.tr span{overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+
+.rejects{background:var(--bad-soft); border-radius:var(--r-md); padding:12px 15px; margin:12px 0}
+.rejects h4{margin:0 0 8px; font-size:14px; color:var(--bad)}
+.rejects h4 ~ h4{margin-top:14px}
+.rj{display:flex; gap:10px; align-items:baseline; font-size:13.5px;
+  padding:4px 0; flex-wrap:wrap}
+.rj .ln{color:var(--muted); font-size:12px; white-space:nowrap}
+.rj .raw{flex:1; min-width:120px; color:var(--ink)}
+.rj .why{color:var(--bad); font-weight:600}
+
+.banner.ok-b{background:var(--ok-soft); color:var(--ok); font-weight:600}
+
+/* ---------- ניווט לפי קבוצות ---------- */
+.navg{margin-bottom:14px}
+.navg h4{margin:0 0 6px; font-size:12px; color:var(--faint); font-weight:700}
+.navg .chips{gap:6px}
+
+.pl{padding:30px 24px; text-align:center}
+.pl h3{margin:0 0 8px}
+.pl .why{color:var(--muted); max-width:46ch; margin:0 auto 12px}
+
 @media (prefers-reduced-motion: reduce){
   *{animation:none !important; transition:none !important}
 }

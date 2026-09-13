@@ -4,9 +4,14 @@
    ⚠ **נתיב אמיתי לכל נקודת קצה**, ולא `?action=`. הדפוס ההוא
      נולד ממגבלת 12 הפונקציות של Vercel, וכאן אין מגבלה כזו.
 
-   ⚠ **השער בכל שורה גלוי כאן.** `guard(...)` עוטף כל handler,
-     והרשימה הזו היא המקום היחיד שבו אפשר לראות במבט אחד מי
-     מוגן ומי לא. נקודת קצה בלי `guard` בולטת מיד.
+   ⚠⚠ **השער של כל שורה גלוי כאן.** `guard(...)` עוטף כל
+     handler, והרשימה הזו היא המקום היחיד שבו אפשר לראות
+     במבט אחד מי מוגן ומי לא — נקודת קצה בלי `guard` בולטת
+     מיד. `npm run check` נכשל על אחת כזו.
+
+   ⚠ **`admin: true` הוא ראש המכינה בלבד.** האפיון משנה את
+     האפליקציה כולה, ומי שמדליק בטעות מודול משנה מה שכל
+     המכינה רואה.
    ============================================================ */
 
 import { guard } from "../auth.js";
@@ -14,6 +19,8 @@ import * as session from "./session.js";
 import * as profile from "./profile.js";
 import * as people from "./people.js";
 import * as attendance from "./attendance.js";
+import * as studio from "./studio.js";
+import * as nav from "./nav.js";
 
 export const ROUTES = {
   /* ⚠ אלה **אינם** עטופים, ובכוונה: אי אפשר להתחבר כשמחייבים
@@ -27,16 +34,33 @@ export const ROUTES = {
      לשגיאה בקונסול. */
   "session/me": { GET: session.me },
 
-  /* ⚠ הפרופיל נקרא **בלי התחברות**: מסך הכניסה צריך את שם
-     המכינה ואת הצבעים שלה לפני שיש משתמש. המיפוי כאן מפורש
-     ומחזיר את החלק הציבורי בלבד. */
+  /* ⚠ הפרופיל הציבורי נקרא **בלי התחברות**: מסך הכניסה צריך
+     את שם המכינה ואת הצבעים שלה לפני שיש משתמש. */
   "profile/public": { GET: profile.publicProfile },
+
+  /* ⚠ הניווט נבנה **בשרת** מהמודולים ומהתפקידים, ולא במסך.
+     מסך שיחשב את זה בעצמו יתפצל מהשרת ביום שמישהו יכבה
+     מודול — והמשתמש יראה לשונית שנפתחת ל-403. */
+  "nav": { GET: guard(nav.menu) },
+
   "profile/full": { GET: guard(profile.fullProfile, { staffOnly: true }) },
   "profile/update": { PUT: guard(profile.update, { screen: "settings" }) },
 
+  /* ---------- הסטודיו ---------- */
+  "studio/state": { GET: guard(studio.state, { screen: "settings" }) },
+  "studio/save": { PUT: guard(studio.save, { screen: "settings" }) },
+  /* ⚠ preview אינו כותב דבר — ולכן הוא POST ולא PUT, והשרת
+     מבדיל ביניהם בשמות ולא בדגל. */
+  "studio/preview": { POST: guard(studio.preview, { screen: "settings" }) },
+  "studio/commit": { POST: guard(studio.commit, { screen: "settings" }) },
+  "studio/invite": { POST: guard(studio.invite, { screen: "settings" }) },
+
+  /* ---------- אנשים ---------- */
   "people/list": { GET: guard(people.list, { screen: "people" }) },
   "people/me": { GET: guard(people.myProfile) },
 
+  /* ---------- נוכחות ---------- */
   "attendance/day": { GET: guard(attendance.day, { screen: "attendance" }) },
   "attendance/mark": { POST: guard(attendance.mark, { screen: "attendance" }) },
+  "attendance/summary": { GET: guard(attendance.mySummary) },
 };

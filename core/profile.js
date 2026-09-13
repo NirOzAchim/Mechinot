@@ -22,6 +22,7 @@
    ============================================================ */
 
 import { ENUMS, schemaModules } from "./schema.js";
+import { MODULE_CATALOG, coreModules } from "./catalog.js";
 
 /* ============================================================
    שכבה 3 — המבנה. קבוע, ומוצהר.
@@ -65,23 +66,16 @@ export const VOCAB_KEYS = [
    שכבה 2 — המודולים
    ⚠ מודול כבוי אינו קיים: לא בניווט, לא בחיפוש, לא בפעמון,
      ולא כטבלה. «מוסתר» הוא מצב שמישהו מגלה דרך כתובת ישירה.
+
+   ⚠⚠ **הרשימה מגיעה מ-core/catalog.js ואינה נכתבת כאן.**
+     שתי רשימות מקבילות מתפצלות בתוספת הראשונה — ואז האשף
+     מציע מודול שהניווט אינו מכיר.
    ============================================================ */
-export const MODULES = {
-  attendance: { title: "נוכחות והיעדרויות", core: true },
-  requests: { title: "בקשות יציאה", core: true },
-  lessons: { title: "לו״ז ושיעורים", core: true },
-  teams: { title: "מסגרות ושיבוצים", core: true },
-  inventory: { title: "מלאי ורשימות קניות" },
-  faults: { title: "תקלות ובעיות" },
-  duties: { title: "תורנויות" },
-  leadweek: { title: "שבוע הובלה" },
-  ratings: { title: "דירוג מרצים" },
-  board: { title: "לוח מודעות" },
-};
+export const MODULES = Object.fromEntries(
+  Object.entries(MODULE_CATALOG).map(([k, m]) => [k, { title: m.title, core: Boolean(m.core) }]));
 
 /** מודול ליבה אינו ניתן לכיבוי — בלעדיו אין מוצר */
-export const CORE_MODULES = Object.entries(MODULES)
-  .filter(([, m]) => m.core).map(([k]) => k);
+export const CORE_MODULES = coreModules();
 
 /* ============================================================
    מבנה המסמך

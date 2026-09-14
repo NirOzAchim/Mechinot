@@ -17,7 +17,7 @@
 
 import React, { useEffect, useState, useCallback } from "react";
 import { api } from "./api.js";
-import { applyColors } from "./styles.js";
+import { applyTheme } from "./styles.js";
 import { Paste } from "./Paste.jsx";
 
 const STEP_ORDER = ["identity", "vocab", "roles", "modules", "year", "people", "texts"];
@@ -140,7 +140,7 @@ function Identity({ st, save }) {
   const setColor = (k, x) => {
     const next = { ...v, colors: { ...(v.colors || {}), [k]: x } };
     setV(next);
-    applyColors(next.colors);   // ⚠ מיד, לא אחרי שמירה
+    applyTheme(next.colors);   // ⚠ מיד, לא אחרי שמירה
   };
 
   const COLORS = [

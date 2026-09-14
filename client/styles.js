@@ -1,364 +1,572 @@
 /* ============================================================
-   שפת העיצוב — נגזרת מהאפיון, לא מקובעת
+   שפת העיצוב
    ------------------------------------------------------------
-   ⚠⚠ **הצבעים מגיעים מהפרופיל.** `--bg`, `--surface`, `--ink`,
-     `--accent`, `--warm` נכתבים על `:root` בזמן ריצה מתוך
-     `identity.colors`. מכינה שתבחר פלטה אחרת מקבלת אותה בכל
-     המסכים — ולכן **אסור לכתוב הקס בשום כלל CSS כאן**.
+   ⚠⚠⚠ **בלוק ה-:root נבנה מ-theme.js ואינו מוקלד כאן.**
+     שתי רשימות טוקנים — אחת כברירת מחדל ב-CSS ואחת שנכתבת
+     בזמן ריצה — מתפצלות בתוספת הראשונה, ואז טוקן קיים לפני
+     הכניסה ונעלם אחריה. מקור אחד, ואי אפשר לסטות.
 
-     במערכת הקודמת כ-30 כללים נשאו הקס מקובע, ומצב לילה
-     השאיר אותם בהירים — רשת הקיצורים במסך הבית נשארה לבנה
-     עם טקסט קרם, בלתי קריאה לגמרי. הבעיה התגלתה בצילום מסך
-     ולא בבנייה, כי **CSS שגוי אינו שגיאה**.
+   ⚠⚠ **אין בקטיקים בקובץ הזה מלבד אלה שעוטפים מחרוזת.**
+     הוא בנוי ממחרוזות תבנית, ובקטיק בהערת CSS סוגר אותן
+     והשארית הופכת לקוד. זה קרה במערכת הקודמת חמש פעמים,
+     ובאחת מהן הבנייה דיווחה הצלחה בעוד הדפדפן נשבר.
+     npm run check סופר אותם.
 
-   ⚠ **משטח מוגדר בצל ולא במסגרת.** צל דו-שכבתי: קו צמוד
-     שמגדיר קצה, ופיזור רך שמרים. שכבה אחת נותנת או קצה חד
-     או ערפל, לא את שתיהן.
+   ⚠ **ואין הקס כאן בכלל.** הצבעים מגיעים מהאפיון של המכינה,
+     וכלל עם הקס נשאר בצבע אחד לכל הלקוחות — וזה מתגלה רק
+     בצילום מסך, כי CSS שגוי אינו שגיאה.
 
-   ⚠ **משתנה שאינו קיים אינו שגיאה** — `var(--nope)` נפתר
-     לכלום והרקע נשאר שקוף. זה נראה «בסדר» על משטח לבן
-     ונעלם בכל מקום אחר. כל משתנה כאן מוגדר ב-`:root`.
+   ============================================================
+   חמשת העקרונות
+   ------------------------------------------------------------
+   1. משטח מוגדר בצל ולא במסגרת. מסגרת מפרידה, צל מרים.
+      ⚠ והמסגרת הוחלשה ולא הוסרה — בלעדיה משטח לבן על קרם
+      בהיר מאבד את הקצה באור שמש ובמסכים חיוורים.
+   2. רוב הדברים שטוחים. **מעט מאוד מורם.** ממשק שבו כל
+      כרטיס צף הוא ממשק בלי היררכיה.
+   3. צבע ראשי אחד, במשורה. כל השאר ניטרלי.
+   4. מעבר על מה שבאמת משתנה בלבד — לעולם לא transition:all.
+   5. מספרים ב-tabular-nums. טבלה שהספרות בה קופצות נראית
+      חובבנית ברגע.
    ============================================================ */
 
-export const CSS = `
-:root{
-  --bg:#F5F1E8; --surface:#FFFFFF; --ink:#1F2733;
-  --accent:#002454; --warm:#906048;
+import { rootVars } from "./theme.js";
 
-  --muted:#6B6455; --faint:#A29A88;
-  --line:#E7E0D2; --sand:#F1ECE0;
-  --ok:#177A45; --ok-soft:#DFF0E4;
-  --warn:#8A5A1E; --warn-soft:#F5EBDA;
-  --bad:#9E3626; --bad-soft:#F8E6E2;
+/* ⚠⚠ **הפונט נטען, ולא רק נקרא בשמו.** הגרסה הראשונה ביקשה
+   Assistant ולא טענה אותו בשום מקום — כלומר כל המערכת רצה
+   על Segoe UI, ואיש לא ידע. זה היה חצי מההרגשה של «נראה לא
+   גמור».
 
-  --r-lg:20px; --r-md:14px; --r-sm:10px;
-  --sh-1:0 1px 2px rgba(47,38,22,.05), 0 8px 20px -12px rgba(47,38,22,.18);
-  --sh-2:0 2px 5px rgba(47,38,22,.06), 0 20px 44px -20px rgba(47,38,22,.3);
-  --ease:cubic-bezier(.22,1,.36,1);
-}
+   ⚠ **ועם מחסנית נפילה אמיתית**: רשת שנופלת אינה אמורה
+   להשאיר עברית בפונט סריפי. */
+export const FONT_HREF =
+  "https://fonts.googleapis.com/css2?family=Assistant:wght@400;500;600;700;800&display=swap";
 
-*{box-sizing:border-box}
-html,body,#root{height:100%}
+/* ⚠ טוקנים שאינם צבע — מידות, רדיוסים, תזמון. אינם נגזרים
+   מהאפיון, ולכן כאן ולא ב-theme.js. */
+const SCALE = `
+  --r-xs: 8px;  --r-sm: 11px; --r-md: 14px;
+  --r-lg: 18px; --r-xl: 24px; --r-full: 999px;
+
+  --s1: 4px;  --s2: 8px;  --s3: 12px; --s4: 16px;
+  --s5: 22px; --s6: 32px; --s7: 48px; --s8: 72px;
+
+  --t-fast: 120ms; --t-mid: 200ms; --t-slow: 340ms;
+  --ease: cubic-bezier(.22,1,.36,1);
+
+  /* ⚠⚠ **הגוון הנוכחי חייב ברירת מחדל.** .tone-N דורסת אותו
+     על ההורה, אבל .card.edge או .pill.tone בלי הורה כזה היו
+     מקבלים var(--t) שנפתר **לכלום** — כלומר פס שקוף ותגית
+     בלי צבע, בלי שום שגיאה. זו בדיוק משפחת הבאגים של --sand
+     ושל --navy שחיו חודשים במערכת הקודמת, ו-npm run check
+     תופס אותה עכשיו. */
+  --t: var(--accent); --t-s: var(--a-soft); --t-l: var(--a-300);
+`;
+
+const BASE = `
+*{ box-sizing:border-box; }
+html,body,#root{ height:100%; }
+button,input,textarea,select{ font:inherit; color:inherit; }
+button{ background:none; border:none; padding:0; cursor:pointer; }
+svg{ display:block; flex:none; }
+::selection{ background:var(--a-soft-2); }
+
+/* ⚠ טבעת מיקוד אחת לכל המערכת. ברירת המחדל שונה בכל דפדפן,
+   ומי שמסיר אותה בלי חלופה שובר ניווט במקלדת לגמרי. */
+:focus-visible{ outline:2px solid var(--accent); outline-offset:2px;
+  border-radius:var(--r-xs); }
+
+.scroll-y{ overflow-y:auto; overscroll-behavior:contain; }
+.scroll-x{ overflow-x:auto; overscroll-behavior-x:contain;
+  scrollbar-width:none; }
+.scroll-x::-webkit-scrollbar{ display:none; }
+
+.row{ display:flex; align-items:center; gap:var(--s3); }
+.row.start{ align-items:flex-start; }
+.row.wrap{ flex-wrap:wrap; }
+.grow{ flex:1; min-width:0; }
+.stack{ display:grid; gap:var(--s3); }
+.two{ display:grid; grid-template-columns:1fr 1fr; gap:var(--s3); }
+.three{ display:grid; grid-template-columns:repeat(3,1fr); gap:var(--s3); }
+.auto{ display:grid; gap:var(--s3);
+  grid-template-columns:repeat(auto-fit,minmax(210px,1fr)); }
+@media (max-width:620px){ .two,.three{ grid-template-columns:1fr; } }
+`;
+
+const TYPE = `
+/* ============================================================
+   טיפוגרפיה
+   ⚠ עברית צריכה גובה שורה נדיב יותר מלטינית — 1.65 בגוף.
+   ⚠ וכותרות ב-letter-spacing שלילי: בגדלים גדולים המרווח
+     הטבעי נראה רופף.
+   ============================================================ */
+html{ -webkit-text-size-adjust:100%; }
 body{
   margin:0; background:var(--bg); color:var(--ink);
-  font-family:"Assistant","Segoe UI",system-ui,-apple-system,sans-serif;
-  font-size:16px; line-height:1.6; -webkit-font-smoothing:antialiased;
+  font-family:Assistant,"Segoe UI",Arial,system-ui,-apple-system,sans-serif;
+  font-size:15.5px; line-height:1.65;
+  font-feature-settings:"kern" 1;
+  -webkit-font-smoothing:antialiased; -moz-osx-font-smoothing:grayscale;
 }
-button{font:inherit; color:inherit}
-input{font:inherit}
+h1,h2,h3,h4{ margin:0; font-weight:700; line-height:1.25; }
+h1{ font-size:27px; letter-spacing:-.024em; font-weight:800; }
+h2{ font-size:20px; letter-spacing:-.018em; }
+h3{ font-size:16.5px; letter-spacing:-.012em; }
+h4{ font-size:12px; letter-spacing:.06em; font-weight:700; color:var(--faint); }
+p{ margin:0; }
+.display{ font-size:34px; font-weight:800; letter-spacing:-.032em; line-height:1.15; }
+.muted{ color:var(--muted); }
+.faint{ color:var(--faint); font-size:13.5px; }
+.tiny{ font-size:12.5px; color:var(--faint); }
+.num{ font-variant-numeric:tabular-nums; font-feature-settings:"tnum" 1; }
+.ltr{ direction:ltr; text-align:left; }
+.mono{ font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  font-size:12.5px; direction:ltr; }
+.nowrap{ white-space:nowrap; }
+.trunc{ overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+a{ color:var(--accent); }
+`;
 
-.wrap{max-width:820px; margin:0 auto; padding:0 16px}
-
-/* ---------- טיפוגרפיה ---------- */
-h1,h2,h3{margin:0; font-weight:700; letter-spacing:-.01em}
-h1{font-size:26px}
-h2{font-size:19px}
-h3{font-size:17px}
-.muted{color:var(--muted)}
-.faint{color:var(--faint); font-size:14px}
-
-/* ---------- משטחים ---------- */
-.card{
-  background:var(--surface); border:1px solid var(--line);
-  border-radius:var(--r-lg); box-shadow:var(--sh-1); padding:18px 20px;
-}
-.card.lift{box-shadow:var(--sh-2)}
-
-/* ---------- כפתורים ---------- */
-.btn{
-  border:1px solid transparent; border-radius:var(--r-md);
-  padding:11px 18px; cursor:pointer; font-weight:600;
-  background:var(--accent); color:#fff;
-  transition:transform .12s var(--ease), box-shadow .12s var(--ease);
-  box-shadow:var(--sh-1);
-}
-.btn:hover:not(:disabled){transform:translateY(-1px); box-shadow:var(--sh-2)}
-.btn:active:not(:disabled){transform:translateY(0)}
-.btn:disabled{opacity:.5; cursor:not-allowed}
-.btn.ghost{background:transparent; color:var(--accent); border-color:var(--line); box-shadow:none}
-.btn.ghost:hover:not(:disabled){background:var(--sand)}
-.btn.block{width:100%}
-.btn:focus-visible, input:focus-visible{outline:2px solid var(--accent); outline-offset:2px}
-
-/* ---------- שדות ---------- */
-.field{display:block; margin-bottom:14px}
-.field label{display:block; font-size:14px; color:var(--muted); margin-bottom:6px; font-weight:600}
-.field input{
-  width:100%; padding:14px 15px; border-radius:var(--r-md);
-  border:1px solid var(--line); background:var(--sand); color:var(--ink);
-}
-.field input:focus{background:var(--surface); border-color:var(--accent)}
-
-/* ---------- רצועת מספרים ---------- */
-.band{
-  display:grid; gap:1px; background:var(--line);
-  border-radius:var(--r-lg); overflow:hidden; box-shadow:var(--sh-1);
-  grid-template-columns:repeat(auto-fit,minmax(120px,1fr));
-}
-.band > div{background:var(--surface); padding:16px 18px; text-align:center}
-.band .k{font-size:30px; font-weight:800; line-height:1.1; font-variant-numeric:tabular-nums}
-.band .l{font-size:13px; color:var(--muted); margin-top:2px}
-.band .k.ok{color:var(--ok)} .band .k.bad{color:var(--bad)} .band .k.warn{color:var(--warn)}
-
-/* ---------- רשימות ---------- */
-.rows{display:grid; gap:8px}
-.row{
-  display:flex; align-items:center; gap:12px;
-  background:var(--surface); border:1px solid var(--line);
-  border-radius:var(--r-md); padding:12px 15px;
-}
-.row .grow{flex:1; min-width:0}
-.row .nm{font-weight:600}
-
-/* ---------- תגיות מצב ----------
-   ⚠ צבע לעולם לא לבדו: לכל מצב יש גם מילה. מי שאינו מבחין
-   בין ירוק לאדום, ומי שמדפיס בשחור-לבן, חייב לדעת מה קורה. */
-.pill{
-  font-size:13px; font-weight:700; padding:4px 10px;
-  border-radius:999px; white-space:nowrap;
-}
-.pill.present{background:var(--ok-soft); color:var(--ok)}
-.pill.absent{background:var(--bad-soft); color:var(--bad)}
-.pill.half{background:var(--warn-soft); color:var(--warn)}
-.pill.unmarked{background:var(--sand); color:var(--muted)}
-
-/* ---------- כותרת עליונה ---------- */
-.top{
-  background:var(--accent); color:#fff; padding:14px 0;
-  box-shadow:var(--sh-1); position:sticky; top:0; z-index:10;
-}
-.top .wrap{display:flex; align-items:center; gap:12px}
-.top .nm{font-weight:700; font-size:17px}
-.top .sub{font-size:13px; opacity:.75}
-.top .grow{flex:1}
-.top button{
-  background:rgba(255,255,255,.14); border:none; color:#fff;
-  padding:7px 13px; border-radius:var(--r-sm); cursor:pointer; font-size:14px;
-}
-.top button:hover{background:rgba(255,255,255,.24)}
-
-/* ---------- מצבי מסך ----------
-   ⚠ **כשל טעינה נראה אחרת מ«אין נתונים».** תמיד. */
-.banner{
-  border-radius:var(--r-md); padding:13px 16px; margin:14px 0; font-size:15px;
-}
-.banner.err{background:var(--bad-soft); color:var(--bad); font-weight:600}
-.banner.info{background:var(--warn-soft); color:var(--warn)}
-.empty{text-align:center; padding:36px 20px; color:var(--muted)}
-.skel{
-  height:52px; border-radius:var(--r-md); margin-bottom:8px;
-  background:linear-gradient(90deg,var(--sand),var(--surface),var(--sand));
-  background-size:200% 100%; animation:sk 1.4s infinite;
-}
-@keyframes sk{to{background-position:-200% 0}}
-
-/* ---------- מסך הכניסה ---------- */
-.login{min-height:100%; display:grid; place-items:center; padding:24px 16px}
-.login .box{width:100%; max-width:400px}
-.login .brand{text-align:center; margin-bottom:22px}
-.login .brand .mark{
-  width:64px; height:64px; border-radius:18px; margin:0 auto 12px;
-  background:var(--accent); color:#fff; display:grid; place-items:center;
-  font-size:26px; font-weight:800; box-shadow:var(--sh-2);
-}
-.login .brand h1{font-size:24px}
-.login .brand p{margin:4px 0 0; color:var(--muted); font-size:15px}
-
+const SHELL = `
 /* ============================================================
-   הסטודיו
-   ============================================================ */
-.steps{display:flex; gap:8px; overflow-x:auto; padding:4px 0 12px; scrollbar-width:thin}
-.stp{
-  display:flex; align-items:center; gap:8px; white-space:nowrap;
-  background:var(--surface); border:1px solid var(--line); border-radius:var(--r-md);
-  padding:9px 14px; cursor:pointer; box-shadow:var(--sh-1);
-}
-.stp.on{background:var(--accent); color:#fff; border-color:transparent}
-.stp .n{
-  width:22px; height:22px; border-radius:50%; display:grid; place-items:center;
-  background:var(--sand); color:var(--muted); font-size:12px; font-weight:700;
-}
-.stp.on .n{background:rgba(255,255,255,.22); color:#fff}
-.stp .req{font-size:11px; font-weight:700; color:var(--bad)}
-.stp.on .req{color:#fff; opacity:.9}
-.stp .ok{font-size:13px; color:var(--ok); font-weight:800}
-.stp.on .ok{color:#fff}
-
-.row-btns{display:flex; gap:10px; margin-top:16px; flex-wrap:wrap}
-.two{display:grid; grid-template-columns:1fr 1fr; gap:12px}
-@media (max-width:560px){.two{grid-template-columns:1fr}}
-
-textarea{
-  width:100%; padding:13px 15px; border-radius:var(--r-md);
-  border:1px solid var(--line); background:var(--sand); color:var(--ink);
-  font-family:inherit; font-size:15px; line-height:1.6; resize:vertical;
-}
-textarea:focus{background:var(--surface); border-color:var(--accent); outline:none}
-
-/* ---------- צבעים ---------- */
-.colors{display:grid; gap:8px}
-.col-row{display:flex; align-items:center; gap:12px; padding:8px 10px;
-  background:var(--sand); border-radius:var(--r-md)}
-.col-row input[type=color]{
-  width:42px; height:32px; padding:0; border:1px solid var(--line);
-  border-radius:var(--r-sm); background:none; cursor:pointer;
-}
-.col-row code{font-size:12px; color:var(--muted)}
-
-/* ---------- אוצר מילים ---------- */
-.vocab{display:grid; gap:6px}
-.vh,.vr{display:grid; grid-template-columns:1.3fr 1fr 1fr; gap:8px; align-items:center}
-.vh{font-size:12px; color:var(--faint); padding:0 4px}
-.vr code{font-size:11.5px; color:var(--muted); overflow:hidden; text-overflow:ellipsis}
-.vr input{padding:9px 11px; border-radius:var(--r-sm); border:1px solid var(--line);
-  background:var(--sand); color:var(--ink); width:100%}
-.vr input:focus{background:var(--surface); border-color:var(--accent); outline:none}
-@media (max-width:560px){
-  .vh{display:none}
-  .vr{grid-template-columns:1fr 1fr; gap:6px}
-  .vr code{grid-column:1 / -1}
-}
-
-/* ---------- תפקידים ---------- */
-.role{border:1px solid var(--line); border-radius:var(--r-md); padding:14px 16px;
-  margin-bottom:10px; background:var(--surface)}
-.role-head{display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin-bottom:10px}
-.role-name{font-weight:700; font-size:16px; padding:7px 11px; border-radius:var(--r-sm);
-  border:1px solid var(--line); background:var(--sand); color:var(--ink)}
-.role-head code{font-size:11.5px; color:var(--faint)}
-.chips{display:flex; flex-wrap:wrap; gap:6px}
-.chip{font-size:12.5px; padding:5px 11px; border-radius:999px; cursor:pointer;
-  border:1px solid var(--line); background:var(--surface); color:var(--muted)}
-.chip.on{background:var(--accent); color:#fff; border-color:transparent; font-weight:600}
-
-/* ---------- מודולים ---------- */
-.mods{display:grid; gap:10px; grid-template-columns:repeat(auto-fit,minmax(260px,1fr))}
-.mod{border:1px solid var(--line); border-radius:var(--r-md); padding:14px 16px;
-  background:var(--surface); opacity:.62; transition:opacity .12s var(--ease)}
-.mod.on{opacity:1; box-shadow:var(--sh-1)}
-.mod.blocked{opacity:.4}
-.mod-top{display:flex; align-items:center; gap:10px; cursor:pointer; margin-bottom:6px}
-.mod-top input{width:18px; height:18px; accent-color:var(--accent); cursor:pointer}
-.mod .why{margin:0; font-size:14px; color:var(--muted); line-height:1.55}
-.mod .faint{margin:6px 0 0}
-
-/* ---------- ייבוא ---------- */
-.segs{display:flex; gap:8px; overflow-x:auto; padding-bottom:10px}
-.seg{display:flex; align-items:center; gap:7px; white-space:nowrap; cursor:pointer;
-  background:var(--surface); border:1px solid var(--line); border-radius:var(--r-md);
-  padding:8px 14px; font-size:14.5px}
-.seg.on{background:var(--accent); color:#fff; border-color:transparent; font-weight:600}
-.seg .cnt{background:var(--sand); color:var(--muted); border-radius:999px;
-  padding:1px 7px; font-size:11.5px; font-weight:700}
-.seg.on .cnt{background:rgba(255,255,255,.22); color:#fff}
-
-.tbl{border:1px solid var(--line); border-radius:var(--r-md); overflow:hidden; margin:12px 0}
-.tr{display:grid; grid-template-columns:repeat(auto-fit,minmax(90px,1fr));
-  gap:10px; padding:9px 13px; font-size:14px; border-bottom:1px solid var(--line)}
-.tr:last-child{border-bottom:none}
-.tr.th{background:var(--sand); font-weight:700; font-size:12.5px; color:var(--muted)}
-.tr span{overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
-
-.rejects{background:var(--bad-soft); border-radius:var(--r-md); padding:12px 15px; margin:12px 0}
-.rejects h4{margin:0 0 8px; font-size:14px; color:var(--bad)}
-.rejects h4 ~ h4{margin-top:14px}
-.rj{display:flex; gap:10px; align-items:baseline; font-size:13.5px;
-  padding:4px 0; flex-wrap:wrap}
-.rj .ln{color:var(--muted); font-size:12px; white-space:nowrap}
-.rj .raw{flex:1; min-width:120px; color:var(--ink)}
-.rj .why{color:var(--bad); font-weight:600}
-
-.banner.ok-b{background:var(--ok-soft); color:var(--ok); font-weight:600}
-
-/* ---------- ניווט לפי קבוצות ---------- */
-.navg{margin-bottom:14px}
-.navg h4{margin:0 0 6px; font-size:12px; color:var(--faint); font-weight:700}
-.navg .chips{gap:6px}
-
-.pl{padding:30px 24px; text-align:center}
-.pl h3{margin:0 0 8px}
-.pl .why{color:var(--muted); max-width:46ch; margin:0 auto 12px}
-
-/* ============================================================
-   מה שנוסף עם מסכי התוכן
+   שלד האפליקציה
    ------------------------------------------------------------
-   ⚠⚠ **אין בקטיקים בקובץ הזה.** הוא כולו מחרוזת תבנית אחת,
-     ובקטיק בהערת CSS **סוגר אותה** והשארית הופכת לקוד. זה
-     נתפס כאן בבנייה, ובמערכת הקודמת זה קרה חמש פעמים —
-     ובאחת מהן הבנייה דיווחה הצלחה בעוד הדפדפן נשבר.
-     npm run check סופר אותם ונכשל על כל תוספת.
+   ⚠⚠ **סרגל צד במסך רחב, רצועה תחתונה בטלפון.** הגרסה
+     הראשונה הייתה מגירת צ׳יפים שנפתחת — כל מעבר בין מסכים
+     היה שתי נגיעות וחיפוש, ובלי שום תחושת מקום. ניווט קבוע
+     שרואים תמיד הוא ההבדל הגדול ביותר בין «אתר» ל«אפליקציה».
 
-   ⚠ טוקנים בלבד, בלי הקס — הצבעים מגיעים מהאפיון של המכינה.
-
-   ⚠ .banner.ok לצד .banner.ok-b שכבר היה: השם הישן נשאר
-     כדי לא לשבור מסכים קיימים, והחדש הוא מה שנכתב מעכשיו.
+   ⚠ **הסרגל בימין** — הממשק RTL, וניווט בשמאל מכריח את העין
+     לחצות את כל הרוחב בכל מעבר.
    ============================================================ */
-.banner.ok{background:var(--ok-soft); color:var(--ok); font-weight:600}
+.app{ min-height:100%; display:flex; flex-direction:column; }
 
-.pill.ok{background:var(--ok-soft); color:var(--ok)}
-.pill.warn{background:var(--warn-soft); color:var(--warn)}
-.pill.bad{background:var(--bad-soft); color:var(--bad)}
-.pill.plain{background:var(--sand); color:var(--muted)}
-
-.btn.sm{padding:7px 13px; font-size:14px; box-shadow:none}
-.btn:disabled{opacity:.5; cursor:not-allowed}
-
-/* ⚠ שורת פעולות שאינה משטח. .row כבר תפוסה למשטח מוקף
-   מסגרת, ולכן שם אחר ולא עוד וריאציה שלה. */
-.line{display:flex; align-items:center; gap:8px; flex-wrap:wrap}
-.line .grow{flex:1; min-width:0}
-
-/* ⚠ .field label כבר קיים; span הוא אותו דבר, כי כל רכיב
-   חדש נכתב עם label+span — ושתי צורות לאותו דבר הן בדיוק
-   איך שעיצוב מתפצל. */
-.field>span{display:block; font-size:14px; color:var(--muted);
-  margin-bottom:6px; font-weight:600}
-.field textarea, .field select{
-  width:100%; padding:13px 15px; border-radius:var(--r-md);
-  border:1px solid var(--line); background:var(--sand); color:var(--ink);
-  font-family:inherit; font-size:15px;
+.side{
+  position:fixed; inset-block:0; inset-inline-end:0;
+  width:266px; background:var(--surface);
+  border-inline-start:1px solid var(--line);
+  display:flex; flex-direction:column; z-index:40;
 }
-.hint{font-size:13px; color:var(--faint); margin-top:5px}
+.side-top{ padding:var(--s5) var(--s4) var(--s4);
+  display:flex; align-items:center; gap:var(--s3); }
+.side-nav{ flex:1; padding:0 var(--s3) var(--s4); overflow-y:auto; }
+.side-foot{ padding:var(--s3); border-top:1px solid var(--line-soft); }
 
-/* ⚠ טבלת פריטים: שורה שנקראת בסריקה, לא כרטיס לכל דבר.
-   105 פריטי מלאי ככרטיסים הם עשרה מסכי גלילה. */
-.item{
-  display:flex; align-items:center; gap:10px;
+.navgroup{ margin-bottom:var(--s4); }
+.navgroup>h4{ display:flex; align-items:center; gap:6px;
+  padding:0 var(--s3) var(--s2); }
+.navlink{
+  display:flex; align-items:center; gap:10px; width:100%;
+  padding:8px var(--s3); border-radius:var(--r-sm);
+  color:var(--n-600); font-size:14.5px; font-weight:500; text-align:start;
+  transition:background var(--t-fast) var(--ease), color var(--t-fast) var(--ease);
+}
+.navlink:hover{ background:var(--sand); color:var(--ink); }
+.navlink.on{ background:var(--a-soft); color:var(--accent); font-weight:700; }
+.navlink.on svg{ color:var(--accent); }
+.navlink svg{ color:var(--faint); }
+.navlink .cnt{ margin-inline-start:auto; font-size:11.5px; font-weight:700;
+  background:var(--bad); color:var(--surface);
+  min-width:19px; height:19px; border-radius:999px;
+  display:grid; place-items:center; padding:0 5px; }
+
+.top{ position:sticky; top:0; z-index:30;
+  background:var(--surface); border-bottom:1px solid var(--line); }
+.top-in{ height:60px; display:flex; align-items:center; gap:var(--s3);
+  padding:0 var(--s4); max-width:1180px; margin:0 auto; }
+.top .nm{ font-weight:800; letter-spacing:-.02em; font-size:16px; }
+.top .sub{ font-size:12.5px; color:var(--faint); margin-top:-3px; }
+
+.iconbtn{ width:38px; height:38px; border-radius:var(--r-sm);
+  display:grid; place-items:center; color:var(--n-600); position:relative;
+  transition:background var(--t-fast) var(--ease), color var(--t-fast) var(--ease); }
+.iconbtn:hover{ background:var(--sand); color:var(--ink); }
+
+.main{ flex:1; padding:var(--s5) var(--s4) 96px; }
+.wrap{ max-width:1180px; margin:0 auto; }
+.wrap.narrow{ max-width:760px; }
+
+@media (min-width:1024px){
+  .app.has-side{ padding-inline-end:266px; }
+  .app.has-side .top-in{ max-width:100%; padding-inline:var(--s6); }
+  .app.has-side .main{ padding:var(--s6) var(--s6) var(--s7); }
+  .app.has-side .wrap{ max-width:1020px; margin-inline:0; }
+}
+@media (max-width:1023px){ .side{ display:none; } }
+@media (min-width:1024px){ .app.has-side .hide-lg{ display:none; } }
+
+.tabs{
+  position:fixed; inset-inline:0; bottom:0; z-index:40;
+  background:var(--surface); border-top:1px solid var(--line);
+  display:grid; grid-auto-flow:column; grid-auto-columns:1fr;
+  padding-bottom:env(safe-area-inset-bottom);
+  box-shadow:var(--e-2);
+}
+.tab{ padding:8px 2px 9px; display:grid; justify-items:center; gap:3px;
+  color:var(--faint); font-size:11px; font-weight:600; position:relative; }
+.tab.on{ color:var(--accent); }
+.tab.on::before{ content:""; position:absolute; top:0; inset-inline:22%;
+  height:2.5px; border-radius:0 0 3px 3px; background:var(--accent); }
+.tab .dot{ position:absolute; top:6px; inset-inline-end:calc(50% - 16px);
+  width:7px; height:7px; border-radius:999px; background:var(--bad);
+  border:1.5px solid var(--surface); }
+@media (min-width:1024px){ .tabs{ display:none; } .main{ padding-bottom:var(--s7); } }
+`;
+
+const SURFACE = `
+/* ============================================================
+   משטחים
+   ⚠ רוב הכרטיסים **שטוחים** — מסגרת עדינה וצל מינימלי.
+     .lift שמור למה שבאמת צף: טופס פתוח, דיאלוג, כרטיס
+     שדורש פעולה.
+   ============================================================ */
+.card{ background:var(--surface); border:1px solid var(--line);
+  border-radius:var(--r-lg); padding:var(--s5); box-shadow:var(--e-1); }
+.card.tight{ padding:var(--s4); }
+.card.flat{ box-shadow:none; }
+.card.lift{ box-shadow:var(--e-3); border-color:var(--line-soft); }
+
+/* ⚠⚠ פס גוון בקצה העליון של כרטיס. זה הפרט שהופך כרטיס לבן
+   ל«כרטיס של משהו», והוא יורש את הגוון מההורה (.tone-N) —
+   ולכן הכותרת, הפס והתגית באותו כרטיס מקבלים את אותו צבע
+   בלי שאיש יקליד אותו פעמיים. */
+.card.edge{ position:relative; overflow:hidden; }
+.card.edge::before{ content:""; position:absolute; inset-inline:0; top:0;
+  height:3px; background:linear-gradient(90deg,var(--t),var(--t-l)); }
+
+.panel{ background:var(--sand); border-radius:var(--r-md); padding:var(--s4); }
+.hr{ height:1px; background:var(--line-soft); border:0; margin:var(--s4) 0; }
+
+.sec{ display:flex; align-items:flex-end; gap:var(--s3); margin:var(--s6) 0 var(--s3); }
+.sec:first-child{ margin-top:0; }
+.sec h2{ flex:none; }
+.sec .ln{ flex:1; height:1px; background:var(--line-soft); margin-bottom:8px; }
+`;
+
+const TONE = `
+/* ============================================================
+   שמונה גוונים
+   ⚠⚠ **הגוון נגזר מהשם ואינו נשמר.** ועדה חדשה, תפקיד חדש
+     או קבוצה חדשה מקבלים צבע מעצמם — בלי עמודת צבע לתחזק
+     ובלי דיפלוי. אותו שם מקבל תמיד אותו צבע, ולכן הרשימה
+     אינה מתחלפת בכל טעינה.
+
+   ⚠⚠ **גוון של תחום וצבע של מצב הם שני דברים.** ירוק ואדום
+     שמורים למצב — תקין, חוסר, חריגה. אילו גם האריח היה
+     מאדים, מסך עם שתי בעיות היה נראה כמו אזעקה.
+   ============================================================ */
+.tone-0{ --t:var(--t0); --t-s:var(--t0-s); --t-l:var(--t0-l); }
+.tone-1{ --t:var(--t1); --t-s:var(--t1-s); --t-l:var(--t1-l); }
+.tone-2{ --t:var(--t2); --t-s:var(--t2-s); --t-l:var(--t2-l); }
+.tone-3{ --t:var(--t3); --t-s:var(--t3-s); --t-l:var(--t3-l); }
+.tone-4{ --t:var(--t4); --t-s:var(--t4-s); --t-l:var(--t4-l); }
+.tone-5{ --t:var(--t5); --t-s:var(--t5-s); --t-l:var(--t5-l); }
+.tone-6{ --t:var(--t6); --t-s:var(--t6-s); --t-l:var(--t6-l); }
+.tone-7{ --t:var(--t7); --t-s:var(--t7-s); --t-l:var(--t7-l); }
+
+.tile{ width:38px; height:38px; border-radius:var(--r-sm); flex:none;
+  display:grid; place-items:center;
+  background:var(--t-s,var(--a-soft)); color:var(--t,var(--accent)); }
+.tile.lg{ width:46px; height:46px; border-radius:var(--r-md); }
+.tile.sm{ width:30px; height:30px; border-radius:var(--r-xs); }
+
+.ava{ width:38px; height:38px; border-radius:999px; flex:none;
+  display:grid; place-items:center; font-weight:700; font-size:14px;
+  background:var(--t-s,var(--sand)); color:var(--t,var(--n-600));
+  letter-spacing:-.02em; }
+.ava.sm{ width:30px; height:30px; font-size:12px; }
+.ava.lg{ width:52px; height:52px; font-size:19px; }
+`;
+
+const BUTTON = `
+/* ============================================================
+   כפתורים
+   ⚠⚠ **הראשי: שיפוע קל, וזוהר בצבעו שלו מתחתיו.** צל אפור
+     מתחת לכפתור צבעוני נראה כמו שכבה זרה; זוהר בגוונו נראה
+     כמו שהכפתור מאיר. זה הפרט שהכי מבדיל בין כפתור שנראה
+     מצויר לכפתור שנראה מעוצב.
+
+   ⚠ המעבר על transform ו-box-shadow בלבד ולא על all: מעבר
+     על all מנפיש גם רוחב וגם רקע, ואז כל שינוי נראה איטי.
+   ============================================================ */
+.btn{
+  display:inline-flex; align-items:center; justify-content:center; gap:7px;
+  height:44px; padding:0 var(--s5); border-radius:var(--r-md);
+  font-weight:700; font-size:15px; letter-spacing:-.01em; white-space:nowrap;
+  background:linear-gradient(180deg,var(--a-grad-a),var(--a-grad-b));
+  color:var(--a-ink);
+  box-shadow:0 1px 0 var(--a-grad-a) inset, 0 6px 16px -8px var(--a-glow);
+  transition:transform var(--t-fast) var(--ease),
+             box-shadow var(--t-fast) var(--ease),
+             filter var(--t-fast) var(--ease);
+}
+.btn:hover{ box-shadow:0 1px 0 var(--a-grad-a) inset, 0 10px 22px -8px var(--a-glow); }
+.btn:active{ transform:translateY(1px); box-shadow:0 2px 8px -4px var(--a-glow); }
+.btn:disabled{ opacity:.45; cursor:not-allowed; transform:none;
+  box-shadow:none; filter:grayscale(.35); }
+
+.btn.ghost{ background:var(--surface); color:var(--ink);
+  border:1px solid var(--line); box-shadow:var(--e-1); }
+.btn.ghost:hover{ border-color:var(--a-300); box-shadow:var(--e-2); }
+
+.btn.quiet{ background:none; color:var(--n-600); box-shadow:none; }
+.btn.quiet:hover{ background:var(--sand); color:var(--ink); box-shadow:none; }
+
+.btn.danger{ background:var(--surface); color:var(--bad);
+  border:1px solid var(--bad-line); box-shadow:none; }
+.btn.danger:hover{ background:var(--bad-soft); }
+
+.btn.sm{ height:34px; padding:0 var(--s4); font-size:13.5px;
+  border-radius:var(--r-sm); }
+.btn.lg{ height:52px; padding:0 var(--s6); font-size:16.5px; }
+.btn.block{ width:100%; }
+.btn.icon{ width:44px; padding:0; }
+.btn.sm.icon{ width:34px; }
+
+.btns{ display:flex; gap:var(--s2); flex-wrap:wrap; align-items:center; }
+`;
+
+const FORM = `
+/* ============================================================
+   טפסים
+   ⚠⚠ **שדה גבוה (52px) ובמילוי רך ולא לבן.** שדה לבן על
+     כרטיס לבן נשען על המסגרת בלבד, ומסגרת דקה נעלמת בשמש.
+   ⚠ **וטבעת מיקוד ולא רק החלפת צבע מסגרת** — היא נראית גם
+     למי שרואה ניגודיות נמוכה.
+   ============================================================ */
+.field{ display:block; margin-bottom:var(--s4); }
+.field>span,.field>label{ display:block; font-size:13.5px; font-weight:600;
+  color:var(--n-600); margin-bottom:6px; }
+.field .req{ color:var(--bad); margin-inline-start:3px; }
+.inp,
+.field input,.field textarea,.field select{
+  width:100%; height:52px; padding:0 var(--s4);
+  border-radius:var(--r-md); border:1px solid var(--line);
+  background:var(--sand); color:var(--ink); outline:none;
+  transition:background var(--t-fast) var(--ease),
+             border-color var(--t-fast) var(--ease),
+             box-shadow var(--t-fast) var(--ease);
+}
+.field textarea{ height:auto; padding:var(--s3) var(--s4); line-height:1.6;
+  resize:vertical; min-height:96px; }
+.field select{ appearance:none; padding-inline-end:var(--s6); }
+.inp:focus,
+.field input:focus,.field textarea:focus,.field select:focus{
+  background:var(--surface); border-color:var(--accent);
+  box-shadow:0 0 0 4px var(--a-ring);
+}
+.field input::placeholder,.field textarea::placeholder{ color:var(--faint); }
+.field.bad input,.field.bad textarea{ border-color:var(--bad); }
+.field.bad input:focus{ box-shadow:0 0 0 4px var(--bad-ring); }
+.hint{ font-size:12.5px; color:var(--faint); margin-top:6px; line-height:1.5; }
+.err-t{ font-size:12.5px; color:var(--bad); margin-top:6px; font-weight:600; }
+
+/* ⚠ dir=ltr על שעה ותאריך — בלעדיו 19:30 מוצג 30:19 */
+.field input[type="time"],.field input[type="date"]{ direction:ltr; text-align:start; }
+
+.chk{ display:flex; align-items:center; gap:10px; cursor:pointer;
+  padding:9px var(--s3); border-radius:var(--r-sm);
+  transition:background var(--t-fast) var(--ease); }
+.chk:hover{ background:var(--sand); }
+.chk input{ width:18px; height:18px; accent-color:var(--accent); flex:none; }
+.chk.on{ background:var(--a-soft); }
+
+.segs{ display:flex; gap:6px; overflow-x:auto; padding-bottom:2px;
+  scrollbar-width:none; }
+.segs::-webkit-scrollbar{ display:none; }
+.seg{ display:inline-flex; align-items:center; gap:7px; white-space:nowrap;
+  height:38px; padding:0 var(--s4); border-radius:999px;
+  border:1px solid var(--line); background:var(--surface);
+  font-size:14px; font-weight:600; color:var(--n-600);
+  transition:background var(--t-fast) var(--ease),
+             color var(--t-fast) var(--ease),
+             border-color var(--t-fast) var(--ease); }
+.seg:hover{ border-color:var(--a-300); color:var(--ink); }
+.seg.on{ background:var(--accent); color:var(--a-ink); border-color:transparent; }
+/* ⚠ מצב נבחר בצבע **המשמעות** ולא בצבע הראשי: נוכח ירוק,
+   נעדר אדום. כפתור נבחר בכחול על שורה של חניך אינו אומר
+   מה נבחר, רק שמשהו נבחר. */
+.seg.on.ok{ background:var(--ok); }
+.seg.on.bad{ background:var(--bad); }
+.seg.on.warn{ background:var(--warn); }
+
+/* ⚠ בטלפון נשאר האייקון בלבד — שלוש מילים ליד כל שם דוחקות
+   את השם עצמו מהמסך. */
+@media (max-width:560px){ .hide-sm{ display:none; } }
+.seg .cnt{ background:var(--sand); color:var(--muted); border-radius:999px;
+  padding:0 6px; font-size:11.5px; min-width:18px; text-align:center; }
+.seg.on .cnt{ background:var(--a-700); color:var(--a-ink); }
+
+/* ⚠ מפריד עם מילה. שני מסלולים בלי מפריד נראים כמו טופס
+   אחד ארוך. */
+.or{ display:flex; align-items:center; gap:var(--s3); margin:var(--s4) 0;
+  color:var(--faint); font-size:13px; }
+.or::before,.or::after{ content:""; flex:1; height:1px; background:var(--line); }
+`;
+
+const BITS = `
+.pill{ display:inline-flex; align-items:center; gap:5px;
+  font-size:12.5px; font-weight:700; padding:3px 10px;
+  border-radius:999px; white-space:nowrap;
+  background:var(--sand); color:var(--muted); }
+.pill.ok{ background:var(--ok-soft); color:var(--ok); }
+.pill.warn{ background:var(--warn-soft); color:var(--warn); }
+.pill.bad{ background:var(--bad-soft); color:var(--bad); }
+.pill.info{ background:var(--info-soft); color:var(--info); }
+.pill.tone{ background:var(--t-s); color:var(--t); }
+.pill.out{ background:none; border:1px solid currentColor; }
+
+.band{ display:grid; gap:1px; background:var(--line);
+  border:1px solid var(--line); border-radius:var(--r-lg); overflow:hidden;
+  grid-template-columns:repeat(auto-fit,minmax(110px,1fr));
+  box-shadow:var(--e-1); }
+.band>div{ background:var(--surface); padding:var(--s4) var(--s3); text-align:center; }
+.band .k{ font-size:26px; font-weight:800; letter-spacing:-.03em;
+  font-variant-numeric:tabular-nums; line-height:1.15; }
+.band .k.ok{ color:var(--ok); } .band .k.warn{ color:var(--warn); }
+.band .k.bad{ color:var(--bad); } .band .k.accent{ color:var(--accent); }
+.band .l{ font-size:12.5px; color:var(--muted); margin-top:2px; }
+
+.rows{ display:grid; gap:6px; }
+.item{ display:flex; align-items:center; gap:var(--s3);
   background:var(--surface); border:1px solid var(--line);
-  border-radius:var(--r-md); padding:10px 14px; margin-bottom:6px;
+  border-radius:var(--r-md); padding:10px var(--s4);
+  transition:border-color var(--t-fast) var(--ease),
+             box-shadow var(--t-fast) var(--ease); }
+.item.link{ cursor:pointer; text-align:start; width:100%; }
+.item.link:hover{ border-color:var(--a-300); box-shadow:var(--e-2); }
+.item .nm{ font-weight:600; }
+.item.on{ border-color:var(--accent); background:var(--a-soft); }
+.item.dim{ opacity:.55; }
+
+.bar{ height:6px; border-radius:999px; background:var(--sand); overflow:hidden; }
+.bar>i{ display:block; height:100%; border-radius:999px;
+  background:var(--accent); transition:width var(--t-slow) var(--ease); }
+.bar.ok>i{ background:var(--ok); }
+.bar.warn>i{ background:var(--warn); }
+.bar.bad>i{ background:var(--bad); }
+.bar.sm{ height:4px; width:72px; flex:none; }
+
+.banner{ display:flex; align-items:flex-start; gap:10px;
+  border-radius:var(--r-md); padding:12px var(--s4); margin:var(--s3) 0;
+  font-size:14.5px; line-height:1.55;
+  background:var(--sand); color:var(--n-700);
+  border:1px solid var(--line-soft); }
+.banner svg{ margin-top:2px; }
+.banner.err{ background:var(--bad-soft); color:var(--bad);
+  border-color:var(--bad-line); font-weight:600; }
+.banner.ok{ background:var(--ok-soft); color:var(--ok);
+  border-color:var(--ok-line); font-weight:600; }
+.banner.warn{ background:var(--warn-soft); color:var(--warn);
+  border-color:var(--warn-line); }
+.banner.info{ background:var(--info-soft); color:var(--info);
+  border-color:var(--info-line); }
+
+/* ⚠ מצב ריק **מנוסח** ולא «אין נתונים»: הוא אומר מה יופיע
+   כאן ומה הפעולה. ומצב ריק אמיתי וכשל טעינה הם שני מסכים
+   שונים — תמיד. */
+.empty{ text-align:center; padding:var(--s7) var(--s4); }
+.empty .e-ico{ width:56px; height:56px; border-radius:var(--r-lg);
+  margin:0 auto var(--s3); display:grid; place-items:center;
+  background:var(--sand); color:var(--faint); }
+.empty h3{ margin-bottom:4px; }
+.empty p{ color:var(--muted); max-width:42ch; margin:0 auto; }
+
+.skel{ height:60px; border-radius:var(--r-md); margin-bottom:8px;
+  background:linear-gradient(90deg,var(--sand) 25%,var(--n-100) 37%,var(--sand) 63%);
+  background-size:400% 100%; animation:sk 1.4s ease infinite; }
+.skel.sm{ height:18px; }
+.skel.tall{ height:120px; }
+@keyframes sk{ 0%{background-position:100% 0} 100%{background-position:0 0} }
+
+/* ⚠ מסילת שלבים ממוספרת. מספר לצד שם הופך רשימה לרצף. */
+.steps{ display:flex; gap:2px; overflow-x:auto; padding:2px 0 var(--s3);
+  scrollbar-width:none; }
+.steps::-webkit-scrollbar{ display:none; }
+.stp{ display:inline-flex; align-items:center; gap:8px; white-space:nowrap;
+  height:40px; padding:0 var(--s4); border-radius:999px;
+  font-size:14px; font-weight:600; color:var(--muted); }
+.stp .no{ width:23px; height:23px; border-radius:999px; flex:none;
+  display:grid; place-items:center; font-size:12px; font-weight:800;
+  background:var(--sand); color:var(--muted); }
+.stp.done .no{ background:var(--ok-soft); color:var(--ok); }
+.stp.on{ background:var(--accent); color:var(--a-ink); }
+.stp.on .no{ background:var(--a-700); color:var(--a-ink); }
+.stp .must{ font-size:10.5px; color:var(--bad); font-weight:800; }
+.stp.on .must{ color:var(--a-ink); opacity:.75; }
+`;
+
+const OVERLAY = `
+/* ============================================================
+   שכבות על
+   ⚠ **דיאלוג של המערכת ולא confirm() של הדפדפן** — הוא נראה
+     זר, ובחלק מהדפדפנים בנייד הוא נחסם לגמרי, כלומר הכפתור
+     פשוט לא עושה כלום.
+   ============================================================ */
+.scrim{ position:fixed; inset:0; z-index:60; background:var(--scrim);
+  display:grid; place-items:center; padding:var(--s4);
+  animation:fade var(--t-mid) var(--ease); }
+.modal{ background:var(--surface); border-radius:var(--r-xl);
+  box-shadow:var(--e-4); width:100%; max-width:460px; padding:var(--s6);
+  animation:pop var(--t-mid) var(--ease); }
+.modal h2{ margin-bottom:6px; }
+@keyframes fade{ from{opacity:0} }
+@keyframes pop{ from{opacity:0; transform:translateY(10px) scale(.985)} }
+
+/* ⚠ בטלפון — גיליון מלמטה ולא דיאלוג במרכז. האגודל מגיע
+   לתחתית המסך, לא לאמצעו. */
+@media (max-width:620px){
+  .scrim{ align-items:flex-end; padding:0; }
+  .modal{ max-width:100%; border-radius:var(--r-xl) var(--r-xl) 0 0;
+    animation:sheet var(--t-mid) var(--ease);
+    padding-bottom:calc(var(--s6) + env(safe-area-inset-bottom)); }
 }
-.item .nm{font-weight:600; flex:1; min-width:0}
-.item .qty{font-variant-numeric:tabular-nums; font-weight:700; min-width:56px;
-  text-align:center}
-.item.low{border-color:var(--bad); background:var(--bad-soft)}
-.item.bought{opacity:.5}
+@keyframes sheet{ from{transform:translateY(100%)} }
 
-/* ⚠ פס כמות מול יעד. מספר לבדו אינו נקרא ברשימה של מאה. */
-.mini-bar{height:5px; border-radius:999px; background:var(--sand);
-  overflow:hidden; width:70px; flex:none}
-.mini-bar>i{display:block; height:100%; background:var(--ok)}
-.mini-bar.low>i{background:var(--bad)}
+/* ⚠ הודעת הצלחה חולפת ולא באנר שנשאר: באנר שנשאר דוחף את
+   התוכן ומאמן להתעלם. */
+.toasts{ position:fixed; z-index:70; bottom:96px; inset-inline:0;
+  display:grid; justify-items:center; gap:8px; pointer-events:none;
+  padding:0 var(--s4); }
+.toast{ pointer-events:auto; max-width:520px;
+  display:flex; align-items:center; gap:10px;
+  background:var(--n-700); color:var(--bg);
+  border-radius:var(--r-md); padding:11px var(--s4);
+  box-shadow:var(--e-4); font-size:14.5px; font-weight:600;
+  animation:toast var(--t-mid) var(--ease); }
+.toast.ok{ background:var(--ok); color:var(--surface); }
+.toast.bad{ background:var(--bad); color:var(--surface); }
+@keyframes toast{ from{opacity:0; transform:translateY(12px)} }
+@media (min-width:1024px){ .toasts{ bottom:var(--s5); } }
+`;
 
-.stepper{display:flex; align-items:center; gap:4px}
-.stepper button{
-  width:34px; height:34px; border-radius:var(--r-sm); cursor:pointer;
-  border:1px solid var(--line); background:var(--surface); font-weight:700;
-}
-.stepper button:hover{border-color:var(--accent)}
+const MOTION = `
+/* ============================================================
+   תנועה
+   ⚠ **הנפשת כניסה רק במסך הבית.** רשימה של שלושים שורות
+     שנכנסת בהנפשה נראית איטית, לא חיה.
+   ⚠ ו-prefers-reduced-motion מבטל הכול — לא מקצר, מבטל.
+   ============================================================ */
+.enter>*{ animation:rise var(--t-slow) var(--ease) backwards; }
+.enter>*:nth-child(1){ animation-delay:0ms }
+.enter>*:nth-child(2){ animation-delay:40ms }
+.enter>*:nth-child(3){ animation-delay:80ms }
+.enter>*:nth-child(4){ animation-delay:120ms }
+.enter>*:nth-child(5){ animation-delay:160ms }
+.enter>*:nth-child(6){ animation-delay:200ms }
+@keyframes rise{ from{ opacity:0; transform:translateY(8px) } }
 
-@media (prefers-reduced-motion: reduce){
-  *{animation:none !important; transition:none !important}
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{
+    animation-duration:1ms !important; animation-iteration-count:1 !important;
+    transition-duration:1ms !important; scroll-behavior:auto !important;
+  }
 }
 `;
 
-/**
- * מחיל את צבעי המכינה על :root.
- * ⚠ **בזמן ריצה ולא בבנייה** — זו כל הסיבה שאותה חבילה
- *   משרתת כל מכינה.
- */
-export function applyColors(colors = {}) {
-  const root = document.documentElement;
-  for (const [k, v] of Object.entries(colors)) {
-    if (/^#[0-9a-fA-F]{6}$/.test(String(v))) root.style.setProperty(`--${k}`, v);
-  }
-}
+export const CSS = [
+  ":root{\n" + rootVars() + SCALE + "}",
+  BASE, TYPE, SHELL, SURFACE, TONE, BUTTON, FORM, BITS, OVERLAY, MOTION,
+].join("\n");
+
+export { applyTheme, toneOf } from "./theme.js";

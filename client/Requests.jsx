@@ -127,7 +127,7 @@ function StudentView({ d, form, setForm, editing, setEditing, after }) {
         </div></div>
       ) : d.mine.map((r) => (
         <div className="card" key={r.id} style={{ marginBottom: 10 }}>
-          <div className="line" style={{ alignItems: "flex-start" }}>
+          <div className="row" style={{ alignItems: "flex-start" }}>
             <div style={{ flex: 1, minWidth: 0 }}>
               <h3>{typeLabel(r.type)} · {range(r)}</h3>
               <p className="muted" style={{ margin: "4px 0 0" }}>
@@ -142,7 +142,7 @@ function StudentView({ d, form, setForm, editing, setEditing, after }) {
           {/* ⚠⚠ אין כאן שום מילה על שלבים או על מי המליץ מה.
               השרת לא שולח את זה, והמסך לא ממציא. */}
           {r.canEdit && (
-            <div className="line" style={{ marginTop: 12 }}>
+            <div className="row" style={{ marginTop: 12 }}>
               <button className="btn ghost sm" onClick={() => setEditing(r)}>עריכה</button>
               <button className="btn ghost sm" onClick={async () => {
                 await api.requestDelete(r.id);
@@ -228,7 +228,7 @@ function Form({ row, onCancel, onDone }) {
       </label>
 
       {err && <div className="banner err">{err}</div>}
-      <div className="line">
+      <div className="row">
         <button className="btn" disabled={busy}>{busy ? "שולח…" : row ? "שמירה" : "שליחה"}</button>
         <button className="btn ghost" type="button" onClick={onCancel}>ביטול</button>
       </div>
@@ -316,7 +316,7 @@ function StaffCard({ r, after, setMsg }) {
 
   return (
     <div className="card" style={{ marginBottom: 10 }}>
-      <div className="line" style={{ alignItems: "flex-start" }}>
+      <div className="row" style={{ alignItems: "flex-start" }}>
         <div style={{ flex: 1, minWidth: 0 }}>
           <h3>{r.personName}</h3>
           <p className="muted" style={{ margin: "4px 0 0" }}>
@@ -355,7 +355,7 @@ function StaffCard({ r, after, setMsg }) {
             </p>
           )}
           {!open ? (
-            <div className="line" style={{ marginTop: 12 }}>
+            <div className="row" style={{ marginTop: 12 }}>
               <button className="btn sm" disabled={busy}
                 onClick={() => (r.decisionKind === "decide" ? setOpen(true) : decide(true))}>
                 {r.decisionKind === "decide" ? "אישור" : "ממליץ לאשר"}
@@ -379,7 +379,7 @@ function StaffCard({ r, after, setMsg }) {
                   ריק = {r.cost ?? "—"} (לפי השעות). 0 = מאשר ולא גובה.
                 </div>
               </label>
-              <div className="line">
+              <div className="row">
                 <button className="btn" disabled={busy} onClick={() => decide(true)}>
                   {busy ? "רגע…" : "אישור הבקשה"}
                 </button>

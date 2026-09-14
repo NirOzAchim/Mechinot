@@ -16,18 +16,26 @@
 
 import React, { useEffect, useState } from "react";
 import { api } from "./api.js";
+import * as MI from "./icons.jsx";
+import { Avatar, Band, Empty, Failed, Loading, Sec, useToast, heDate } from "./ui.jsx";
 
 const STATES = [
-  { key: "present", label: "נוכח" },
-  { key: "absent", label: "נעדר" },
-  { key: "half", label: "חצי יום" },
+  { key: "present", label: "נוכח", tone: "ok", icon: MI.Check },
+  { key: "absent", label: "נעדר", tone: "bad", icon: MI.Close },
+  { key: "half", label: "חצי", tone: "warn", icon: MI.Clock },
 ];
+
+const tallyOf = (people) => {
+  const t = { present: 0, absent: 0, half: 0, unmarked: 0 };
+  for (const p of people) t[p.status] = (t[p.status] || 0) + 1;
+  return t;
+};
 
 export function Attendance() {
   const [day, setDay] = useState(null);
   const [err, setErr] = useState(null);
-  const [flash, setFlash] = useState(null);
   const [busy, setBusy] = useState(true);
+  const toast = useToast();
 
   const load = (date) => {
     setBusy(true); setErr(null);
@@ -42,84 +50,113 @@ export function Attendance() {
   async function set(personId, status) {
     if (!day) return;
     const before = day;
-    /* אופטימי */
-    setDay({
-      ...day,
-      marked: true,
-      people: day.people.map((p) => p.id === personId ? { ...p, status } : p),
-      tally: tallyOf(day.people.map((p) => p.id === personId ? { ...p, status } : p)),
-    });
+    const people = day.people.map((p) => p.id === personId ? { ...p, status } : p);
+    /* אופטימי — לחיצה שממתינה לשרת מרגישה כאילו לא נקלטה */
+    setDay({ ...day, marked: true, people, tally: tallyOf(people) });
     try {
       await api.mark(day.date, [{ person: personId, status }]);
     } catch (e) {
-      /* ⚠ חזרה אחורה **ואמירה**. */
+      /* ⚠ חזרה אחורה **ואמירה**. סימון שנשאר על המסך אחרי
+         שהשרת דחה אותו הוא שקר, לא נוחות. */
       setDay(before);
-      setFlash(e.offline ? "אין חיבור — הסימון לא נשמר" : `הסימון לא נשמר: ${e.message}`);
-      setTimeout(() => setFlash(null), 5000);
+      toast(e.offline ? "אין חיבור — הסימון לא נשמר" : `לא נשמר: ${e.message}`, "bad");
     }
   }
 
-  const tallyOf = (people) => {
-    const t = { present: 0, absent: 0, half: 0, unmarked: 0 };
-    for (const p of people) t[p.status] = (t[p.status] || 0) + 1;
-    return t;
-  };
+  /* ⚠ **סימון הכול הוא נוחות ולא ברירת מחדל.** יום שנפתח
+     כשכולם מסומנים נוכחים נראה כמו יום שנבדק, ואיש לא בדק. */
+  async function markRest() {
+    if (!day) return;
+    const rest = day.people.filter((p) => p.status === "unmarked");
+    if (!rest.length) return;
+    const before = day;
+    const people = day.people.map((p) =>
+      p.status === "unmarked" ? { ...p, status: "present" } : p);
+    setDay({ ...day, marked: true, people, tally: tallyOf(people) });
+    try {
+      await api.mark(day.date, rest.map((p) => ({ person: p.id, status: "present" })));
+      toast(`${rest.length} סומנו נוכחים`);
+    } catch (e) {
+      setDay(before);
+      toast(`לא נשמר: ${e.message}`, "bad");
+    }
+  }
 
-  if (busy) return <><div className="skel" /><div className="skel" /><div className="skel" /></>;
-  if (err) return (
-    <>
-      <div className="banner err">לא הצלחנו לטעון — {err}</div>
-      <button className="btn" onClick={() => load()}>נסה שוב</button>
-    </>
-  );
+  if (busy) return <Loading rows={6} />;
+  if (err) return <Failed error={err} onRetry={() => load()} />;
   if (!day) return null;
+
+  const unmarked = day.tally.unmarked;
 
   return (
     <>
-      <h2 style={{ marginBottom: 4 }}>נוכחות · {day.date}</h2>
-      <p className="faint" style={{ margin: "0 0 14px" }}>
-        {day.marked
-          ? `סומן לאחרונה ${day.markedAt ? new Date(day.markedAt).toLocaleTimeString("he-IL", { hour: "2-digit", minute: "2-digit" }) : ""}`
-          : "היום טרם סומן"}
-      </p>
-
-      {flash && <div className="banner err">{flash}</div>}
+      <div className="row wrap" style={{ marginBottom: "var(--s4)" }}>
+        <div className="grow">
+          <h1>נוכחות</h1>
+          <p className="muted" style={{ marginTop: 2 }}>
+            {heDate(day.date)}
+            {" · "}
+            {day.marked
+              ? `סומן ${day.markedAt ? new Date(day.markedAt).toLocaleTimeString("he-IL", { hour: "2-digit", minute: "2-digit" }) : ""}`
+              : "טרם סומן"}
+          </p>
+        </div>
+        {unmarked > 0 && day.people.length > 0 && (
+          <button className="btn ghost" onClick={markRest}>
+            <MI.Check size={17} />סימון {unmarked} הנותרים כנוכחים
+          </button>
+        )}
+      </div>
 
       {!day.inYear && (
-        <div className="banner info">התאריך אינו בלוח השנה של המכינה</div>
+        <div className="banner info">
+          <MI.Calendar size={18} />
+          <div>התאריך אינו בלוח השנה של המכינה.</div>
+        </div>
       )}
 
       {day.people.length === 0 ? (
-        <div className="card"><div className="empty">
-          <h3>אין עדיין אנשים במצבה</h3>
-          <p className="muted">הוסיפו אותם בשלב «אנשים» של האפיון.</p>
-        </div></div>
+        <Empty icon={MI.People} title="אין עדיין אנשים במצבה">
+          הוסיפו אותם בשלב «אנשים» של האפיון.
+        </Empty>
       ) : (
-        <div className="rows">
-          {day.people.map((p) => (
-            <div className="row" key={p.id}>
-              <div className="grow">
-                <div className="nm">{p.name}</div>
-                {p.absenceType && (
-                  <div className="faint">היעדרות מאושרת</div>
-                )}
+        <>
+          <Band items={[
+            { value: day.tally.present, label: "נוכחים", tone: "ok" },
+            { value: day.tally.absent, label: "נעדרים", tone: day.tally.absent ? "bad" : "" },
+            { value: day.tally.half, label: "חצי יום", tone: day.tally.half ? "warn" : "" },
+            /* ⚠ «טרם סומן» הוא מצב שלישי ולא היעדר מצב, ולכן
+               הוא מוצג כמספר ולא מושמט. */
+            { value: unmarked, label: "טרם סומנו" },
+          ]} />
+
+          <Sec>הרשימה</Sec>
+          <div className="rows">
+            {day.people.map((p) => (
+              <div className="item" key={p.id}>
+                <Avatar name={p.name} size="sm" />
+                <div className="grow" style={{ minWidth: 0 }}>
+                  <div className="nm trunc">{p.name}</div>
+                  {p.absenceType && (
+                    <div className="tiny">היעדרות מאושרת</div>
+                  )}
+                </div>
+                <div className="row" style={{ gap: 4 }}>
+                  {STATES.map((st) => (
+                    <button key={st.key} onClick={() => set(p.id, st.key)}
+                      aria-pressed={p.status === st.key}
+                      title={st.label}
+                      className={"seg sm " + (p.status === st.key ? "on " + st.tone : "")}
+                      style={{ height: 32, padding: "0 11px", fontSize: 13 }}>
+                      <st.icon size={14} />
+                      <span className="hide-sm">{st.label}</span>
+                    </button>
+                  ))}
+                </div>
               </div>
-              <div style={{ display: "flex", gap: 6 }}>
-                {STATES.map((s) => (
-                  <button
-                    key={s.key}
-                    onClick={() => set(p.id, s.key)}
-                    className={"pill " + (p.status === s.key ? s.key : "unmarked")}
-                    style={{
-                      border: "1px solid var(--line)", cursor: "pointer",
-                      fontWeight: p.status === s.key ? 700 : 500,
-                    }}
-                  >{s.label}</button>
-                ))}
-              </div>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        </>
       )}
     </>
   );

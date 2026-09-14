@@ -15,6 +15,9 @@
 
 import React, { useEffect, useState } from "react";
 import { api } from "./api.js";
+import { screenIcon } from "./icons.jsx";
+import * as MI from "./icons.jsx";
+import { tone } from "./ui.jsx";
 
 export function Placeholder({ k, nav }) {
   const [cat, setCat] = useState(null);
@@ -28,16 +31,30 @@ export function Placeholder({ k, nav }) {
     g.items.map((i) => ({ ...i, group: g.title }))).find((i) => i.key === k);
 
   const why = item && cat?.[item.module]?.why;
+  const Icon = screenIcon(k);
+  const title = item?.title || k;
 
   return (
-    <div className="card lift">
-      <div className="pl">
-        <h3>{item?.title || k}</h3>
-        {item && <p className="faint">{item.group}</p>}
-        {why && <p className="why">{why}</p>}
-        <div className="banner info" style={{ display: "inline-block", textAlign: "right" }}>
-          המסך הזה <b>קיים במכינה שלכם</b> — ההרשאות, הנתונים והתפריט כבר מוכנים לו.
-          <br />הוא עוד לא נבנה.
+    <div className={"card lift edge " + tone(title)} style={{ textAlign: "center" }}>
+      <div style={{ padding: "var(--s5) var(--s3) var(--s4)" }}>
+        <div className="tile lg" style={{ margin: "0 auto var(--s4)" }}>
+          <Icon size={24} />
+        </div>
+        <h2>{title}</h2>
+        {item && <p className="faint" style={{ marginTop: 2 }}>{item.group}</p>}
+        {why && (
+          <p className="muted" style={{ maxWidth: "44ch", margin: "var(--s4) auto 0" }}>
+            {why}
+          </p>
+        )}
+
+        <div className="banner info" style={{ maxWidth: 460, margin: "var(--s5) auto 0",
+          textAlign: "start" }}>
+          <MI.Info size={18} />
+          <div>
+            המסך הזה <b>קיים במכינה שלכם</b> — ההרשאות, הנתונים והתפריט
+            כבר מוכנים לו. הוא עוד לא נבנה.
+          </div>
         </div>
       </div>
     </div>

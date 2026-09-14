@@ -168,25 +168,80 @@ for (const f of readdirSync(join(ROOT, "client"))) {
    ============================================================ */
 section("צבעים מהאפיון");
 
-/* ⚠ **כל קובץ עיצוב ולא רק styles.js.** הקונסולה הביאה
-   `console-styles.js`, וכלל שמכיר קובץ אחד בשם הוא כלל
-   שהקובץ הבא חומק ממנו בשקט. */
-for (const f of readdirSync(join(ROOT, "client")).filter((x) => /styles\.js$/.test(x))) {
-  const css = readFileSync(join(ROOT, "client", f), "utf8");
-  const block = css.slice(css.indexOf("export const"), css.lastIndexOf("`"));
-  const afterRoot = block.slice(block.indexOf("}", block.indexOf(":root{")));
-  const hexes = afterRoot.match(/#[0-9a-fA-F]{6}\b/g) || [];
-  ok(hexes.length === 0,
-    `יש ${hexes.length} צבעי הקס מחוץ ל-:root ב-${f} — ${[...new Set(hexes)].join(" ")}`);
+/* ⚠⚠ **הבדיקה מייבאת את המודול ובודקת את ה-CSS שנוצר, ולא
+   את טקסט הקובץ.** בלוק ה-:root נבנה בזמן ריצה מ-theme.js,
+   ולכן סריקת מקור הכריזה שכל טוקן "אינו מוגדר" — בדיקה
+   שנכשלת על התנהגות נכונה היא בדיקה שמפסיקים להסתכל עליה.
+   מה שנבדק עכשיו הוא **מה שהדפדפן יקבל**. */
+{
+  const sheets = [
+    ["styles.js", (await import("../client/styles.js")).CSS],
+    ["console-styles.js", (await import("../client/console-styles.js")).CONSOLE_CSS],
+  ];
 
-  /* ⚠⚠ **משתנה CSS שנקרא ואינו מוגדר אינו שגיאה** — `var()`
-     נפתר ל«כלום», הרקע יוצא שקוף, וזה חי חודשים במערכת
-     הקודמת פעמיים (`--sand` ואז `--navy`). */
-  const root = block.slice(block.indexOf(":root{"), block.indexOf("}", block.indexOf(":root{")));
-  const defined = new Set((root.match(/--[a-z0-9-]+(?=\s*:)/g) || []));
-  for (const used of new Set(block.match(/var\(\s*(--[a-z0-9-]+)/g) || [])) {
-    const name = used.replace(/var\(\s*/, "");
-    ok(defined.has(name), `${f}: ‎${name}‎ בשימוש ואינו מוגדר ב-:root`);
+  for (const [name, css] of sheets) {
+    ok(typeof css === "string" && css.length > 500, `${name}: לא נוצר CSS`);
+
+    /* ⚠ הצבעים מהאפיון. כלל עם הקס נשאר בצבע אחד לכל
+       המכינות, וזה מתגלה רק בצילום מסך — כי CSS שגוי אינו
+       שגיאה. */
+    const rootStart = css.indexOf(":root{");
+    const rootEnd = css.indexOf("}", rootStart);
+    const after = css.slice(rootEnd);
+    const hexes = after.match(/#[0-9a-fA-F]{6}\b/g) || [];
+    ok(hexes.length === 0,
+      `${name}: ${hexes.length} צבעי הקס מחוץ ל-:root — ${[...new Set(hexes)].join(" ")}`);
+
+    /* ⚠⚠ **משתנה CSS שנקרא ואינו מוגדר אינו שגיאה** —
+       var() נפתר ל«כלום», הרקע יוצא שקוף, וזה חי חודשים
+       במערכת הקודמת פעמיים (--sand ואז --navy). */
+    const root = css.slice(rootStart, rootEnd);
+    const defined = new Set(root.match(/--[a-z0-9-]+(?=\s*:)/g) || []);
+    const used = new Set((css.match(/var\(\s*(--[a-z0-9-]+)/g) || [])
+      .map((u) => u.replace(/var\(\s*/, "")));
+    const missing = [...used].filter((v) => !defined.has(v));
+    ok(missing.length === 0,
+      `${name}: משתנים בשימוש ואינם מוגדרים ב-:root — ${missing.join(" ")}`);
+  }
+}
+
+/* ============================================================
+   7ג. ⚠⚠ מחלקת CSS שאינה קיימת
+   ------------------------------------------------------------
+   `className="line"` על מחלקה שנמחקה **אינה שגיאה**: ה-div
+   פשוט מאבד את העיצוב שלו והכרטיס מתפרק — בלי אזהרה, בלי
+   כשל בנייה, ובלי שום דבר בקונסול. נתפס כאן בצילום מסך
+   אחרי שכתוב שכבת העיצוב, ובדיוק כמו ReferenceError זה
+   סוג הבאג שרק הרצה בפועל מגלה.
+
+   ⚠ **לכל מסך הגיליון שלו.** הקונסולה אינה משתמשת ב-styles
+     של האפליקציה, ובדיקה שתשווה אותה מולו תדווח חמישים
+     שגיאות שאינן שגיאות — וזו בדיקה שמפסיקים להסתכל על
+     הפלט שלה.
+   ============================================================ */
+section("מחלקות CSS");
+
+{
+  const app = (await import("../client/styles.js")).CSS;
+  const con = (await import("../client/console-styles.js")).CONSOLE_CSS;
+  const setOf = (css) => new Set((css.match(/\.[a-z][a-z0-9-]*/g) || []).map((c) => c.slice(1)));
+  const appCls = setOf(app);
+  const conCls = setOf(con);
+
+  /* מסכים שיושבים על הגיליון של הקונסולה */
+  const CONSOLE_FILES = new Set(["Console.jsx"]);
+
+  for (const f of readdirSync(join(ROOT, "client")).filter((x) => /\.jsx$/.test(x))) {
+    const src = readFileSync(join(ROOT, "client", f), "utf8");
+    const known = CONSOLE_FILES.has(f) ? conCls : appCls;
+    const bad = new Set();
+    for (const m of src.matchAll(/className=\{?"([^"]+)"/g)) {
+      for (const c of m[1].split(/\s+/).filter(Boolean)) {
+        if (/^[a-z][a-z0-9-]*$/.test(c) && !known.has(c)) bad.add(c);
+      }
+    }
+    ok(bad.size === 0,
+      `client/${f}: מחלקות שאינן קיימות בגיליון — ${[...bad].join(" ")}`);
   }
 }
 

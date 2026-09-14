@@ -36,14 +36,14 @@ const headName = flag("head", "מנהל המכינה");
 const slug = flag("slug") || suggestSlug(name);
 if (!slug) {
   console.error("");
-  console.error("  ✗ אי אפשר לגזור מזהה משם עברי — יש למסור אותו:");
-  console.error(`      npm run new -- "${name}" --slug <מזהה באנגלית>`);
+  console.error("  [x] Cannot derive a slug from a Hebrew name - pass one:");
+  console.error(`      npm run new -- "${name}" --slug <latin-slug>`);
   console.error("");
   process.exit(1);
 }
 
 if (!USER_RE.test(username)) {
-  console.error("\n  ✗ שם המשתמש חייב להיות באנגלית קטנה, 3–32 תווים\n");
+  console.error("\n  [x] Username: lowercase latin, 3-32 characters\n");
   process.exit(1);
 }
 
@@ -61,13 +61,15 @@ await t.db.create("account", {
 });
 await t.db.create("roleAssignment", { person: head.id, role: "head" });
 
+/* ⚠ הפלט באנגלית — לקונסולת ווינדוס אין bidi, והשורה החשובה
+   כאן היא **פרטי הכניסה**. ראו server/index.js. */
 console.log("");
-console.log(`✓ נפרסה מכינה חדשה: ${name}`);
-console.log(`  כתובת  : http://localhost:5180/m/${slug}/`);
-console.log(`  נתונים : ${t.paths.db}`);
+console.log(`  [ok] New mechina deployed: ${name}`);
+console.log(`       URL   : http://localhost:5180/m/${slug}/`);
+console.log(`       Data  : ${t.paths.db}`);
 console.log("");
-console.log("  יש בה חשבון אחד, ואפיון ריק:");
-console.log(`    ${username} / ${password}   ${headName}`);
+console.log("       One account, and an empty profile:");
+console.log(`         ${username} / ${password}`);
 console.log("");
-console.log("  npm run dev  →  כניסה  →  האשף נפתח מעצמו");
+console.log("       npm run dev  ->  sign in  ->  the wizard opens by itself");
 console.log("");

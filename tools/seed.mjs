@@ -55,7 +55,7 @@ writeDelta({
      שכיבוי מודול אמור לעשות: הם לא קיימים, לא מוסתרים. */
   modules: { duties: false, leadweek: false },
 });
-console.log("✓ נכתב מסמך האפיון");
+console.log("  [ok] profile written");
 
 /* ============================================================
    2. אנשים
@@ -126,7 +126,7 @@ if (!await db.find("account", { username: "chanich" })) {
   });
 }
 
-console.log(`✓ ${staffRows.length} צוות · ${studentRows.length} חניכים`);
+console.log(`  [ok] ${staffRows.length} staff, ${studentRows.length} students`);
 
 /* ============================================================
    3. לוח שנה ונוכחות
@@ -179,7 +179,7 @@ for (const date of past) {
     });
   }
 }
-console.log(`✓ ${dates.length} ימים בלוח השנה · ${past.length} סומנו`);
+console.log(`  [ok] ${dates.length} calendar days, ${past.length} marked`);
 
 /* ============================================================
    4. מסגרות
@@ -198,15 +198,15 @@ for (const [name, category, guide] of TEAMS) {
     }
   }
 }
-console.log(`✓ ${TEAMS.length} מסגרות`);
+console.log(`  [ok] ${TEAMS.length} teams`);
 
 console.log("");
 console.log(`  ${"http://localhost:5180/m/" + slug + "/"}`);
 console.log("");
-console.log("  כניסה:");
-console.log("    david   / mechina2026   ראש המכינה");
-console.log("    renana  / mechina2026   מדריכה");
-console.log("    chanich / mechina2026   חניך");
+console.log("  Sign in with:");
+console.log("    david   / mechina2026   head of the mechina");
+console.log("    renana  / mechina2026   guide");
+console.log("    chanich / mechina2026   student");
 console.log("");
 console.log("  npm run dev");
 console.log("");

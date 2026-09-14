@@ -33,16 +33,16 @@ export function args(argv = process.argv.slice(2)) {
 export async function ensureTenant({ slug, name, preset = "premil", force = false }) {
   const problem = slugProblem(slug);
   if (problem) {
-    console.error(`\n  ✗ ${problem}\n`);
+    console.error(`\n  [x] ${problem}\n`);
     process.exit(1);
   }
 
   const existing = getMechina(slug);
   if (existing && !force) {
     console.error("");
-    console.error(`  ✗ כבר יש מכינה במזהה «${slug}» (${existing.name}).`);
-    console.error("    כדי לכתוב עליה מחדש ולאבד את הנתונים שלה:  --force");
-    console.error(`    כדי לפתוח אחת נוספת:                        --slug <מזהה אחר>`);
+    console.error(`  [x] A mechina with the slug "${slug}" already exists (${existing.name}).`);
+    console.error("      To overwrite it and lose its data:   --force");
+    console.error("      To open another one instead:         --slug <other-slug>");
     console.error("");
     process.exit(1);
   }
@@ -54,9 +54,9 @@ export async function ensureTenant({ slug, name, preset = "premil", force = fals
     await t.db.reset();
     t.writeDelta({});
     t.invalidateProfile();
-    console.log(`  ⚠ «${slug}» אופסה לפני הכתיבה.`);
+    console.log(`  [!] "${slug}" was reset before writing.`);
   }
 
-  console.log(`  → כותב למכינה «${slug}»  (${t.paths.db})`);
+  console.log(`  -> writing to mechina "${slug}"  (${t.paths.db})`);
   return t;
 }

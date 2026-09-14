@@ -90,6 +90,10 @@ export const Gear = (p) => <I {...p}><circle cx="12" cy="12" r="3.2" /><path d="
 export const Logout = (p) => <I {...p}><path d="M14 8V5.5A1.5 1.5 0 0 0 12.5 4h-7A1.5 1.5 0 0 0 4 5.5v13A1.5 1.5 0 0 0 5.5 20h7a1.5 1.5 0 0 0 1.5-1.5V16" /><path d="M9 12h11M17 9l3 3-3 3" /></I>;
 export const Info = (p) => <I {...p}><circle cx="12" cy="12" r="8.5" /><path d="M12 11v5.5M12 7.8v.4" /></I>;
 export const Warn = (p) => <I {...p}><path d="M12 3.8L21 19.5H3z" /><path d="M12 9.5v4.5M12 17v.4" /></I>;
+export const Eye = (p) => <I {...p}><path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12z" /><circle cx="12" cy="12" r="3" /></I>;
+export const File = (p) => <I {...p}><path d="M14 3H7a1.5 1.5 0 0 0-1.5 1.5v15A1.5 1.5 0 0 0 7 21h10a1.5 1.5 0 0 0 1.5-1.5V7.5z" /><path d="M14 3v4.5h4.5" /></I>;
+export const Copy = (p) => <I {...p}><rect x="8.5" y="8.5" width="12" height="12" rx="2.2" /><path d="M15.5 5.5A2 2 0 0 0 13.5 3.5h-8a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2" /></I>;
+export const Lock = (p) => <I {...p}><rect x="4.5" y="10.5" width="15" height="10" rx="2.2" /><path d="M8 10.5V7.5a4 4 0 0 1 8 0v3" /></I>;
 export const Sparkle = (p) => <I {...p}><path d="M12 3.5l1.7 4.8 4.8 1.7-4.8 1.7L12 16.5l-1.7-4.8-4.8-1.7 4.8-1.7z" /><path d="M18.5 15.5l.8 2 2 .8-2 .8-.8 2-.8-2-2-.8 2-.8z" /></I>;
 
 /* ============================================================

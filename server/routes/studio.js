@@ -134,7 +134,7 @@ function parseOrThrow(kind, text) {
 /** ⚠ **אינו כותב דבר.** */
 export async function preview({ body, db }) {
   const kind = String(body?.kind || "");
-  const { p, rows, bad } = parseOrThrow(kind, body?.text);
+  const { p, rows, bad, header } = parseOrThrow(kind, body?.text);
 
   /* מה מתוך מה שהודבק כבר קיים */
   const existing = [];
@@ -152,6 +152,9 @@ export async function preview({ body, db }) {
     rows: rows.slice(0, 200),
     total: rows.length,
     bad,
+    /* ⚠ שורת הכותרות **מדווחת ואינה מושמטת בשקט** — מי שרואה
+       «ייכתבו 3» על קובץ בן ארבע שורות צריך לדעת למה. */
+    header,
     existing,
     /* ⚠ מוצג במפורש: כמה ייכתבו וכמה ידולגו. «נוסיף 33» כשבפועל
        נוספים 20 הוא ההבדל בין אמון לחוסר אמון במסך. */
@@ -170,7 +173,7 @@ function keyWhere(p, r) {
 /** ⚠ כותב. הוא זה שמאחורי כפתור «אישור». */
 export async function commit({ body, db, user }) {
   const kind = String(body?.kind || "");
-  const { p, rows, bad } = parseOrThrow(kind, body?.text);
+  const { p, rows, bad, header } = parseOrThrow(kind, body?.text);
 
   const created = [], skipped = [], failed = [];
 
@@ -206,7 +209,7 @@ export async function commit({ body, db, user }) {
   return {
     ok: true, kind,
     created: created.length, skipped: skipped.length,
-    bad, failed,
+    bad, failed, header,
     /* ⚠ הסכום מוצג כדי שהמנהל יוכל להשוות למה שהדביק. */
     pasted: rows.length + bad.length,
   };

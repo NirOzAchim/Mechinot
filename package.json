@@ -11,6 +11,7 @@
     "build": "vite build",
     "start": "node server/start.js",
     "seed": "node tools/seed.mjs",
+    "seed:niroz": "node tools/seed-niroz.mjs",
     "reset": "node tools/seed.mjs --reset",
     "check": "node tools/check.mjs && node tools/check-tenancy.mjs",
     "check:static": "node tools/check.mjs",

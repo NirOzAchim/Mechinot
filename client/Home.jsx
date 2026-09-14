@@ -154,11 +154,37 @@ export function Home({ user, brand, nav, go }) {
         </>
       )}
 
+      {/* ---------- מה קרה השבוע ----------
+          ⚠ מוצג **לצוות בלבד ורק כשיש מספרים**: רצועה של
+            אפסים בתחילת שנה נראית כמו מערכת ריקה. */}
+      {user.isStaff && reqs && (reqs.requests?.length > 0) && (
+        <>
+          <Sec right={
+            <button className="btn ghost sm" onClick={() => go("requests")}>
+              <MI.Enter size={15} />לבקשות
+            </button>}>בקשות היציאה</Sec>
+          <Band items={[
+            { value: reqs.waitingForMe || 0, label: "ממתינות להכרעתך",
+              tone: reqs.waitingForMe ? "warn" : "" },
+            { value: reqs.requests.filter((r) => r.status === "pending").length,
+              label: "פתוחות בסך הכול" },
+            { value: reqs.requests.filter((r) => r.appeal).length || null,
+              label: "עררים" },
+          ]} />
+        </>
+      )}
+
       {/* ---------- כל המסכים ----------
+          ⚠⚠ **בטלפון בלבד** (`hide-lg`). במסך רחב סרגל הצד
+            מציג בדיוק את אותה רשימה, ורצועה ואריחים באותו
+            מסך הם כפילות ולא הדגשה — נתפס בצילום מסך של
+            ארבעים אריחים שחוזרים על הניווט שלצידם. בטלפון
+            אין סרגל צד, ולכן שם הרשת **היא** הניווט.
+
           ⚠ אריחים ולא צ׳יפים: אייקון, שם וגוון נגזר-שם.
             רשימת מילים בלי צורה אינה נסרקת בעין. */}
       {nav?.groups?.length > 0 && (
-        <>
+        <div className="hide-lg">
           <Sec>כל המסכים</Sec>
           <div className="stack" style={{ gap: "var(--s5)" }}>
             {nav.groups.map((g) => {
@@ -187,7 +213,7 @@ export function Home({ user, brand, nav, go }) {
               );
             })}
           </div>
-        </>
+        </div>
       )}
 
       {brand?.setupNeeded?.length > 0 && (

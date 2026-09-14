@@ -99,7 +99,7 @@ export function vacationCost(fromDate, toDate, outAt, backAt) {
    ============================================================ */
 
 /** מה שהחניך רואה על הבקשה **שלו** */
-const toStudent = (r, { canEdit }) => ({
+const toStudent = (r, { canEdit, canAppeal }) => ({
   id: r.id,
   type: r.type,
   fromDate: r.fromDate,
@@ -111,9 +111,14 @@ const toStudent = (r, { canEdit }) => ({
      ואין שם של אף אחד. */
   status: r.status,
   chargedDays: r.chargedDays,
+  /* ⚠ הערר **שלו** חוזר אליו — הוא כתב אותו, והוא צריך
+     לראות שהוא נקלט. אין כאן שום נתון של אדם אחר. */
+  appeal: r.appeal || null,
+  appealAt: r.appealAt || null,
   /* ⚠ נגזר בשרת ואינו מחושב במסך — כפתור שמופיע ומקבל 403
      אחרי שהמשתמש כבר הקליד הוא בדיוק מה שהכלל נועד למנוע. */
   canEdit,
+  canAppeal,
 });
 
 /** מה שהצוות רואה */
@@ -137,6 +142,12 @@ const toStaff = (r, { personName, guideName, decidedName, stage, canDecide, deci
   decidedName,
   decidedAt: r.decidedAt || null,
   chargedDays: r.chargedDays,
+  /* ⚠⚠ **הערר מגיע למכריע.** הוא נכתב על בקשה שכבר הוכרעה,
+     ובלי שהוא יוצא כאן הוא נכתב לתוך שורה שאיש אינו קורא —
+     כלומר החניך מדבר אל הקיר. נתפס בצילום מסך של מסך הבית:
+     הרצועה ספרה עררים והמיפוי לא החזיר את השדה. */
+  appeal: r.appeal || null,
+  appealAt: r.appealAt || null,
   cost: vacationCost(r.fromDate, r.toDate, r.outAt, r.backAt),
   stage,
   /* ⚠ הפעמון וכרטיס תשומת הלב הולכים לפי `canDecide` בלבד —
@@ -211,7 +222,13 @@ export async function list({ db, user, profile }) {
       .reduce((n, r) => n + (Number(r.chargedDays) || 0), 0);
 
     return {
-      mine: mine.map((r) => toStudent(r, { canEdit: r.status === "pending" })),
+      /* ⚠⚠ **ערר קיים רק על בקשה שהוכרעה, ופעם אחת.** ערר
+         שני היה דורס את הראשון, וראש המכינה היה קורא טקסט
+         אחר ממה שקרא אתמול. */
+      mine: mine.map((r) => toStudent(r, {
+        canEdit: r.status === "pending",
+        canAppeal: r.status !== "pending" && !r.appeal,
+      })),
       quota,
       used,
       /* ⚠ `null` כשאין מכסה מוגדרת, ולא 0 — «נותרו 0» הוא
@@ -300,7 +317,7 @@ export async function create({ db, user, body, profile }) {
     attachment: body?.attachment || null,
   });
 
-  return { ok: true, request: toStudent(row, { canEdit: true }), cost };
+  return { ok: true, request: toStudent(row, { canEdit: true, canAppeal: false }), cost };
 }
 
 /* ============================================================
@@ -370,8 +387,26 @@ export async function decide({ db, user, body, profile }) {
   const approve = body?.approve === true;
   const row = await db.get("leaveRequest", id);
   if (!row) throw new DataError("הבקשה לא נמצאה", 404);
+
+  /* ============================================================
+     ⚠⚠ שינוי החלטה שכבר ניתנה
+     ------------------------------------------------------------
+     הכלל שמנהל שני לא יהפוך החלטה בלי שאיש יידע **נשאר
+     בתוקף**: 409 על הכרעה חוזרת, אלא אם נשלח `redo` — וזה
+     כפתור אחד במסך, אחרי אישור שאומר מה בדיוק ישתנה.
+
+     ⚠⚠⚠ **ובלי זה הערר הוא מבוי סתום.** חניך שמגיש ערר על
+       החלטה שאי אפשר לשנות מדבר אל הקיר — נתפס כאן בהרצה,
+       כשהערר נרשם יפה ולא הייתה שום דרך לפעול לפיו.
+
+     ⚠ **ראש המכינה בלבד** — המדריך ממליץ ואינו הופך הכרעה.
+     ============================================================ */
+  const redo = body?.redo === true;
   if (row.status !== "pending") {
-    throw new DataError("הבקשה כבר הוכרעה", 409);
+    if (!redo) throw new DataError("הבקשה כבר הוכרעה", 409);
+    if (!isHead(user)) {
+      throw new DataError("שינוי החלטה שכבר ניתנה שמור לראש המכינה", 403);
+    }
   }
 
   const g = await guideOf(db, row.person);
@@ -403,14 +438,29 @@ export async function decide({ db, user, body, profile }) {
       decidedAt: now,
       chargedDays: approve ? charged : null,
       /* ⚠ **ההמלצה שדולגה נשארת ריקה** ואינה מומצאת בדיעבד. */
+      /* ⚠⚠ **הכרעה חדשה מנקה ערר פתוח.** התראה על משהו
+         שכבר טופל היא בדיוק מה שגורם לסגור את הפעמון. */
+      appeal: null,
+      appealAt: null,
     });
 
     /* ⚠⚠ **שורות ההיעדרות נוצרות בהכרעה הסופית בלבד**, ואחת
        לכל יום בטווח — לנוכחות זה הנתון הנכון. */
-    let created = 0;
+    let created = 0, removed = 0;
+    /* ⚠ בשינוי החלטה מנקים **קודם**: אישור שהפך לדחייה חייב
+       להחזיר את הימים, ואישור ששונה לו החיוב חייב שהשורות
+       יישאו את המספר החדש. */
+    if (row.status !== "pending") removed = await clearAbsences(db, id);
     if (approve) created = await writeAbsences(db, next);
 
-    return { ok: true, status: next.status, absences: created, charged: next.chargedDays };
+    return {
+      ok: true, status: next.status,
+      absences: created, absencesRemoved: removed,
+      charged: next.chargedDays,
+      /* ⚠ מוחזר מה שקרה **בפועל** ולא «נשמר» — המסך צריך
+         לומר אמת על מה שהשתנה במכסה. */
+      changed: row.status !== "pending",
+    };
   }
 
   /* ---------- המדריך ממליץ ---------- */
@@ -449,6 +499,19 @@ export async function decide({ db, user, body, profile }) {
    ⚠ ו-`source: "request"` — שורה שסומנה ביד היא עובדה על
      היום ולא תוצאה של הבקשה, והיפוך החלטה לא ימחק אותה.
    ============================================================ */
+/* ⚠⚠ **ההיעדרויות מתהפכות עם ההחלטה.** אישור שהופך לדחייה
+   חייב למחוק את השורות שנוצרו ממנו — אחרת החניך נשאר נעדר
+   ביום שהבקשה שלו נדחתה, והמכסה נשארת מחויבת.
+
+   ⚠ **ורק שורות שנוצרו מהבקשה הזו** (`request`). שורה שמוביל
+     השבוע סימן ביד היא עובדה על היום ולא תוצאה של הבקשה,
+     ומחיקתה הייתה מוחקת את הסימון שלו. */
+async function clearAbsences(db, requestId) {
+  const rows = await db.list("absence", { where: { request: requestId } });
+  for (const a of rows) await db.remove("absence", a.id);
+  return rows.length;
+}
+
 async function writeAbsences(db, req) {
   const from = Date.parse(req.fromDate + "T00:00:00Z");
   const to = Date.parse(req.toDate + "T00:00:00Z");
@@ -465,9 +528,62 @@ async function writeAbsences(db, req) {
     await db.create("absence", {
       person: req.person, date, type: req.type,
       source: "request", detail: req.detail || null,
-      cost: null, request: req.id,
+      /* ⚠ **ריק = 1 ולא 0** בצד הקורא: כל שורה שנוצרה לפני
+         שהעמודה הייתה קיימת נכתבה בעולם שבו יום הוא יום.
+         כאן נכתב מה שנגבה בפועל, כשהוכרע. */
+      cost: req.chargedDays ?? null, request: req.id,
     });
     n++;
   }
   return n;
+}
+
+/* ============================================================
+   ערר
+   ------------------------------------------------------------
+   ⚠⚠⚠ **הערר אינו משנה את הסטטוס.** «נדחה» עם ערר פתוח הוא
+     עדיין «נדחה», והחניך אינו יוצא — **וזה כתוב במסך**, כי
+     בלי זה מישהו ייסע הביתה. מה שהוא עושה הוא להחזיר את
+     הבקשה לתשומת הלב.
+
+   ⚠⚠ **מסלול נפרד, לפני הבדיקה של «ממתינה».** `update` דוחה
+     בכוונה כל בקשה שהוכרעה — והערר קיים **רק** עליהן. מסלול
+     אחד לשניהם היה מחייב לפתוח את העריכה על בקשות סגורות,
+     וזה בדיוק מה שאסור.
+
+   ⚠ **פעם אחת להכרעה.** ערר שני דורס את הראשון, וראש המכינה
+     קורא טקסט אחר ממה שקרא אתמול.
+   ============================================================ */
+export async function appeal({ db, user, body }) {
+  if (user.isStaff) {
+    throw new DataError("ערר מוגש על ידי החניך עצמו", 403);
+  }
+  const id = String(body?.id || "");
+  const row = await db.get("leaveRequest", id);
+  /* ⚠ **404 ולא 403** על בקשה של חניך אחר — 403 מאשר שהשורה קיימת. */
+  if (!row || row.person !== user.personId) throw new DataError("הבקשה לא נמצאה", 404);
+
+  if (row.status === "pending") {
+    throw new DataError("הבקשה עוד לא הוכרעה — ערר מוגש על החלטה", 409);
+  }
+  if (row.appeal) {
+    throw new DataError("כבר הוגש ערר על הבקשה הזו, והוא ממתין להכרעה", 409);
+  }
+
+  const text = String(body?.appeal || "").trim();
+  if (text.length < 10) {
+    throw new DataError("יש לכתוב מה השתנה או מה לא נלקח בחשבון — לפחות עשרה תווים");
+  }
+
+  await db.update("leaveRequest", id, {
+    appeal: text.slice(0, 2000),
+    appealAt: new Date().toISOString(),
+  });
+
+  return {
+    ok: true,
+    /* ⚠ נאמר במפורש שהסטטוס לא זז. בלי זה מישהו ייסע הביתה. */
+    status: row.status,
+    note: "הערר נרשם. ההחלטה עצמה לא השתנתה — היא חוזרת לבדיקה של ראש המכינה.",
+  };
 }

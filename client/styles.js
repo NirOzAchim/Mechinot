@@ -506,8 +506,13 @@ const OVERLAY = `
 .scrim{ position:fixed; inset:0; z-index:60; background:var(--scrim);
   display:grid; place-items:center; padding:var(--s4);
   animation:fade var(--t-mid) var(--ease); }
+/* ⚠⚠ **גובה מוגבל וגלילה בפנים.** דיאלוג גבוה מהמסך נחתך
+   בתחתיתו — וכפתור השמירה הוא בדיוק מה שנחתך. נתפס בצילום
+   מסך של עורך התפקידים, שיש בו ארבעים מסכים לסמן. */
 .modal{ background:var(--surface); border-radius:var(--r-xl);
   box-shadow:var(--e-4); width:100%; max-width:460px; padding:var(--s6);
+  max-height:calc(100vh - 2 * var(--s4)); overflow-y:auto;
+  overscroll-behavior:contain;
   animation:pop var(--t-mid) var(--ease); }
 .modal h2{ margin-bottom:6px; }
 @keyframes fade{ from{opacity:0} }
@@ -518,7 +523,7 @@ const OVERLAY = `
 @media (max-width:620px){
   .scrim{ align-items:flex-end; padding:0; }
   .modal{ max-width:100%; border-radius:var(--r-xl) var(--r-xl) 0 0;
-    animation:sheet var(--t-mid) var(--ease);
+    animation:sheet var(--t-mid) var(--ease); max-height:90vh;
     padding-bottom:calc(var(--s6) + env(safe-area-inset-bottom)); }
 }
 @keyframes sheet{ from{transform:translateY(100%)} }
@@ -564,9 +569,97 @@ const MOTION = `
 }
 `;
 
+const DATA = `
+/* ============================================================
+   טבלה, מתג, דגימת צבע, אזור שחרור
+   ------------------------------------------------------------
+   ⚠ אלה הרכיבים של מסכי **העריכה** — האפיון והייבוא. הם אינם
+     ברוב המסכים, והפרדתם לבלוק משלהם היא מה שמאפשר לקרוא את
+     שפת העיצוב בלי לדלג עליהם.
+
+   ⚠⚠ **טבלה גוללת לרוחב ולא נדחסת.** חמש עמודות על טלפון
+     נדחסות לשלוש אותיות לעמודה, ואז התצוגה המקדימה — שכל
+     תכליתה לקרוא לפני שכותבים — אינה ניתנת לקריאה.
+   ============================================================ */
+.tbl{ border:1px solid var(--line); border-radius:var(--r-md);
+  overflow:hidden; background:var(--surface); }
+.tbl .rl{ display:grid; gap:1px; background:var(--line-soft); }
+.tbl .tr{ display:grid; background:var(--surface);
+  grid-template-columns:var(--cols,repeat(auto-fit,minmax(90px,1fr)));
+  font-size:13.5px; }
+.tbl .tr>span{ padding:9px var(--s3); min-width:0;
+  overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.tbl .tr.hd{ background:var(--sand); font-weight:700; font-size:12.5px;
+  color:var(--n-600); position:sticky; top:0; z-index:1; }
+.tbl .tr.hd>span{ padding:8px var(--s3); }
+.tbl .more{ padding:9px var(--s3); font-size:12.5px; color:var(--faint);
+  background:var(--sand); }
+
+/* ⚠⚠ **מתג ולא תיבת סימון למודול.** «דלוק/כבוי» הוא מצב של
+   דבר שרץ, וזה מה שמתג אומר; תיבת סימון אומרת «בחרתי». */
+.sw{ position:relative; display:inline-flex; flex:none;
+  width:44px; height:26px; cursor:pointer; }
+.sw input{ position:absolute; opacity:0; width:100%; height:100%;
+  margin:0; cursor:pointer; }
+/* ⚠ המסילה הכבויה ב-n-300 ולא ב-n-200: עם ידית לבנה וצל
+   רך, מסילה בהירה מדי נקראת כמו כפתור לבן ולא כמו מתג
+   כבוי — ואז לא ברור בכלל שיש כאן מצב. נתפס בצילום מסך. */
+.sw i{ position:absolute; inset:0; border-radius:999px;
+  background:var(--n-300); box-shadow:var(--e-in);
+  transition:background var(--t-fast) var(--ease); }
+.sw i::after{ content:""; position:absolute; top:3px; inset-inline-start:3px;
+  width:20px; height:20px; border-radius:999px; background:var(--surface);
+  box-shadow:var(--e-2);
+  transition:transform var(--t-fast) var(--ease); }
+.sw input:checked + i{ background:var(--accent); }
+/* ⚠ הזזה **הפוכה** — הממשק RTL, וידית שנעה ימינה בדלוק נראית
+   כמו כיבוי. */
+.sw input:checked + i::after{ transform:translateX(-18px); }
+.sw input:disabled + i{ opacity:.45; }
+.sw input:focus-visible + i{ box-shadow:0 0 0 4px var(--a-ring); }
+
+/* ⚠ דגימת צבע — הריבוע **הוא** הכפתור, ולידו ההקס לקריאה.
+   input[type=color] לבדו נראה שונה בכל דפדפן. */
+.swatch{ display:flex; align-items:center; gap:10px;
+  border:1px solid var(--line); border-radius:var(--r-md);
+  padding:7px var(--s3); background:var(--sand); }
+.swatch input[type="color"]{ width:34px; height:34px; padding:0; flex:none;
+  border:none; border-radius:var(--r-sm); background:none; cursor:pointer; }
+.swatch input[type="color"]::-webkit-color-swatch{ border:none;
+  border-radius:var(--r-sm); }
+.swatch input[type="color"]::-webkit-color-swatch-wrapper{ padding:0; }
+.swatch .hx{ font-family:ui-monospace,Menlo,Consolas,monospace;
+  font-size:12.5px; direction:ltr; color:var(--muted); text-transform:uppercase; }
+
+/* ⚠⚠ **הדבקה וקובץ באותו מקום.** הגרסה הראשונה קיבלה הדבקה
+   בלבד, וזה נכון לוואטסאפ ולמסמך — אבל מי שמחזיק אקסל נאלץ
+   לפתוח, לסמן, להעתיק. אזור שחרור לצד תיבת ההדבקה עולה
+   שורה אחת ומוריד שלושה שלבים. */
+.drop{ border:1.5px dashed var(--line); border-radius:var(--r-lg);
+  padding:var(--s5) var(--s4); text-align:center; cursor:pointer;
+  background:var(--sand); color:var(--muted);
+  transition:border-color var(--t-fast) var(--ease),
+             background var(--t-fast) var(--ease); }
+.drop:hover{ border-color:var(--a-300); }
+.drop.over{ border-color:var(--accent); background:var(--a-soft);
+  color:var(--accent); }
+.drop input{ display:none; }
+
+/* ⚠ שורה שנדחתה — **הסיבה לצד הטקסט הגולמי**, ולא הודעה
+   כללית מעל הרשימה. «3 שורות לא נקלטו» אינו מאפשר לתקן. */
+.rj{ display:flex; align-items:baseline; gap:10px; flex-wrap:wrap;
+  padding:7px var(--s3); border-radius:var(--r-sm); font-size:13.5px; }
+.rj:nth-child(odd){ background:var(--sand); }
+.rj .ix{ font-size:11.5px; font-weight:700; color:var(--faint);
+  font-variant-numeric:tabular-nums; flex:none; }
+.rj .raw{ flex:1; min-width:140px; color:var(--n-700);
+  overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.rj .why{ color:var(--bad); font-weight:600; font-size:12.5px; }
+`;
+
 export const CSS = [
   ":root{\n" + rootVars() + SCALE + "}",
-  BASE, TYPE, SHELL, SURFACE, TONE, BUTTON, FORM, BITS, OVERLAY, MOTION,
+  BASE, TYPE, SHELL, SURFACE, TONE, BUTTON, FORM, BITS, DATA, OVERLAY, MOTION,
 ].join("\n");
 
 export { applyTheme, toneOf } from "./theme.js";

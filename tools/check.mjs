@@ -197,8 +197,16 @@ section("צבעים מהאפיון");
        במערכת הקודמת פעמיים (--sand ואז --navy). */
     const root = css.slice(rootStart, rootEnd);
     const defined = new Set(root.match(/--[a-z0-9-]+(?=\s*:)/g) || []);
-    const used = new Set((css.match(/var\(\s*(--[a-z0-9-]+)/g) || [])
-      .map((u) => u.replace(/var\(\s*/, "")));
+
+    /* ⚠ **משתנה עם נפילה לאחור אינו נספר.** `var(--cols,repeat(…))`
+       הוא משתנה שהמסך קובע בשורה עצמה — הוא **אינו יכול**
+       להיפתר לכלום, וזו כל הסכנה שהבדיקה הזו קיימת בשבילה.
+       ספירה שלו הייתה שגיאה שאינה שגיאה, וזו בדיוק בדיקה
+       שמפסיקים להסתכל על הפלט שלה. */
+    const used = new Set();
+    for (const m of css.matchAll(/var\(\s*(--[a-z0-9-]+)\s*(,?)/g)) {
+      if (!m[2]) used.add(m[1]);
+    }
     const missing = [...used].filter((v) => !defined.has(v));
     ok(missing.length === 0,
       `${name}: משתנים בשימוש ואינם מוגדרים ב-:root — ${missing.join(" ")}`);

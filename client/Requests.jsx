@@ -18,6 +18,7 @@
 
 import React, { useEffect, useState, useCallback } from "react";
 import { api } from "./api.js";
+import * as MI from "./icons.jsx";
 
 const TYPES = [
   { slug: "vacation", label: "יום חופש", needsDetail: false },
@@ -150,9 +151,73 @@ function StudentView({ d, form, setForm, editing, setEditing, after }) {
               }}>ביטול הבקשה</button>
             </div>
           )}
+
+          {/* ---------- ערר ----------
+              ⚠⚠ **הערר אינו משנה את הסטטוס, וזה כתוב כאן.**
+                בלי המשפט הזה מישהו יראה «הוגש ערר» ויסיק
+                שהוא יכול לנסוע. */}
+          {r.appeal && (
+            <div className="banner info" style={{ marginTop: 12 }}>
+              <MI.Info size={17} />
+              <div>
+                <b>הוגש ערר</b> — ההחלטה עצמה לא השתנתה.
+                <div className="tiny" style={{ marginTop: 3 }}>{r.appeal}</div>
+              </div>
+            </div>
+          )}
+          {r.canAppeal && <Appeal row={r} after={after} />}
         </div>
       ))}
     </>
+  );
+}
+
+
+/* ============================================================
+   ערר על החלטה
+   ⚠⚠ **פעם אחת, ורק על בקשה שהוכרעה.** ערר שני היה דורס את
+     הראשון, וראש המכינה היה קורא טקסט אחר ממה שקרא אתמול.
+   ⚠ **וההחלטה נשארת כפי שהיא** — נאמר לפני השליחה ואחריה.
+   ============================================================ */
+function Appeal({ row, after }) {
+  const [open, setOpen] = useState(false);
+  const [text, setText] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState(null);
+
+  if (!open) {
+    return (
+      <div className="row" style={{ marginTop: 12 }}>
+        <button className="btn quiet sm" onClick={() => setOpen(true)}>
+          הגשת ערר על ההחלטה
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="panel" style={{ marginTop: 12 }}>
+      <p className="tiny" style={{ marginBottom: 8 }}>
+        מה השתנה, או מה לא נלקח בחשבון? <b>ההחלטה עצמה לא משתנה</b> —
+        הבקשה חוזרת לבדיקה של ראש המכינה.
+      </p>
+      {err && <div className="err-t" style={{ marginBottom: 8 }}>{err}</div>}
+      <textarea className="inp" rows={3} value={text}
+        style={{ height: "auto", padding: "10px 14px", minHeight: 76 }}
+        placeholder="ידעתי על זה חודש מראש, ולא הספקתי לכתוב את זה בבקשה."
+        onChange={(e) => setText(e.target.value)} />
+      <div className="btns" style={{ marginTop: 10 }}>
+        <button className="btn sm" disabled={busy || text.trim().length < 10}
+          onClick={async () => {
+            setBusy(true); setErr(null);
+            try {
+              const r = await api.requestAppeal(row.id, text);
+              after(r.note);
+            } catch (e) { setErr(e.message); setBusy(false); }
+          }}>{busy ? "שולח…" : "שליחת הערר"}</button>
+        <button className="btn quiet sm" onClick={() => setOpen(false)}>ביטול</button>
+      </div>
+    </div>
   );
 }
 
@@ -288,29 +353,35 @@ function StaffView({ d, after, setMsg }) {
       )}
 
       {shown.map((r) => (
-        <StaffCard key={r.id} r={r} after={after} setMsg={setMsg} />
+        <StaffCard key={r.id} r={r} isHead={d.isHead} after={after} setMsg={setMsg} />
       ))}
     </>
   );
 }
 
-function StaffCard({ r, after, setMsg }) {
+function StaffCard({ r, isHead, after, setMsg }) {
   const [open, setOpen] = useState(false);
+  const [redo, setRedo] = useState(false);
   const [charge, setCharge] = useState("");
   const [busy, setBusy] = useState(false);
 
-  const decide = async (approve) => {
+  const decide = async (approve, again = false) => {
     setBusy(true);
     try {
       const out = await api.requestDecide(r.id, approve,
-        approve && charge !== "" ? Number(charge) : undefined);
+        approve && charge !== "" ? Number(charge) : undefined, again);
       /* ⚠ ההמלצה אינה הכרעה, וזה נאמר — אחרת המדריך מניח
           שהוא סגר את העניין. */
+      /* ⚠ נאמר מה **באמת** השתנה, כולל ההיעדרויות שהוסרו.
+         «נשמר» על פעולה שמחקה ארבע שורות נוכחות אינו אמת. */
       after(out.note
         ? out.note
-        : approve
-          ? `אושר${out.charged != null ? ` · נגבו ${out.charged} ימים` : ""}${out.absences ? ` · נרשמו ${out.absences} ימי היעדרות` : ""}`
-          : "נדחה");
+        : [
+            approve ? "אושר" : "נדחה",
+            out.charged != null && `נגבו ${out.charged} ימים`,
+            out.absences > 0 && `נרשמו ${out.absences} ימי היעדרות`,
+            out.absencesRemoved > 0 && `בוטלו ${out.absencesRemoved} ימי היעדרות`,
+          ].filter(Boolean).join(" · "));
     } catch (e) { setMsg(null); setBusy(false); alert(e.message); }
   };
 
@@ -341,8 +412,28 @@ function StaffCard({ r, after, setMsg }) {
             </p>
           )}
         </div>
-        <span className={"pill " + STATUS[r.status].tone}>{STATUS[r.status].label}</span>
+        <div className="row" style={{ gap: 6 }}>
+          {/* ⚠ הערר מסומן **על הכרטיס**: הוא הסיבה היחידה
+              שבקשה שהוכרעה חוזרת לתשומת הלב. */}
+          {r.appeal && <span className="pill warn">ערר</span>}
+          <span className={"pill " + STATUS[r.status].tone}>{STATUS[r.status].label}</span>
+        </div>
       </div>
+
+      {/* ---------- ערר ----------
+          ⚠⚠ **מוצג במלואו למכריע.** החניך כתב אותו כדי שמישהו
+            יקרא אותו; ערר שנשמר ואינו מוצג הוא שיחה אל הקיר.
+          ⚠ ו«ההחלטה לא השתנתה» נאמר גם כאן, כדי שלא ייקרא
+            כמו בקשה חדשה שממתינה. */}
+      {r.appeal && (
+        <div className="banner warn" style={{ marginTop: 10 }}>
+          <MI.Warn size={17} />
+          <div>
+            <b>הוגש ערר</b> — ההחלטה עומדת בעינה עד שתשונה במפורש.
+            <div style={{ marginTop: 4 }}>{r.appeal}</div>
+          </div>
+        </div>
+      )}
 
       {/* ⚠⚠ **המילים שונות למי שממליץ ולמי שמכריע.** «אישור»
           אצל המדריך הוא שקר — הוא המליץ, וראש המכינה עוד יכול
@@ -388,6 +479,39 @@ function StaffCard({ r, after, setMsg }) {
             </div>
           )}
         </>
+      )}
+
+      {/* ---------- שינוי החלטה שכבר ניתנה ----------
+          ⚠⚠ **ראש המכינה בלבד, ורק בלחיצה מפורשת.** הכלל
+            שמנהל שני לא יהפוך החלטה בלי שאיש יידע נשאר
+            בתוקף — 409 על הכרעה חוזרת, אלא דרך הכפתור הזה.
+          ⚠ **והאישור אומר מה בדיוק ישתנה**, כולל ימי
+            ההיעדרות שיימחקו. «בטוח?» על פעולה שמשנה מכסה
+            אינה שאלה שאפשר לענות עליה. */}
+      {isHead && r.status !== "pending" && (
+        redo ? (
+          <div className="panel" style={{ marginTop: 12 }}>
+            <p className="tiny" style={{ marginBottom: 10 }}>
+              {r.status === "approved"
+                ? `הפיכה לדחייה תמחק את ימי ההיעדרות שנוצרו מהבקשה${
+                    r.chargedDays ? ` ותחזיר ${r.chargedDays} ימים למכסה` : ""}.`
+                : "אישור ייצור את ימי ההיעדרות ויגבה מהמכסה."}
+            </p>
+            <div className="btns">
+              <button className="btn sm" disabled={busy}
+                onClick={() => decide(r.status !== "approved", true)}>
+                {busy ? "רגע…" : r.status === "approved" ? "להפוך לדחייה" : "להפוך לאישור"}
+              </button>
+              <button className="btn quiet sm" onClick={() => setRedo(false)}>ביטול</button>
+            </div>
+          </div>
+        ) : (
+          <div className="row" style={{ marginTop: 12 }}>
+            <button className="btn quiet sm" onClick={() => setRedo(true)}>
+              <MI.Edit size={15} />שינוי ההחלטה
+            </button>
+          </div>
+        )
       )}
     </div>
   );

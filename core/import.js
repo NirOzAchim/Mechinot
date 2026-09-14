@@ -23,11 +23,57 @@ const SPLIT = /\t|;|,|\s{2,}/;
 
 const clean = (s) => String(s ?? "").replace(/‏|‎/g, "").trim();
 
-/** שורות לא ריקות, עם מספר השורה המקורי */
+/* ============================================================
+   ⚠⚠ שורת כותרות
+   ------------------------------------------------------------
+   מרגע שאפשר לגרור קובץ אקסל, **הקלט כמעט תמיד נושא כותרות** —
+   וזה נתפס בבדיקה: «שם · ת.ז · מגדר · טלפון · עיר» נקלט כחניך
+   בשם «שם», והתצוגה המקדימה אמרה «ייכתבו 4» על שלושה אנשים.
+
+   ⚠ **מדולגת ומדווחת, ולא מושמטת בשקט.** שורה שנעלמת בלי מילה
+     היא בדיוק מה שמונע מהמנהל לדעת אם המערכת הבינה נכון.
+
+   ⚠ **והזיהוי שמרני**: שתי מילות כותרת לפחות, ו**שום תא**
+     שנראה כמו נתון (ת.ז, טלפון או תאריך). רשימה שבה החניך
+     הראשון נקרא «שם טוב» לא תיחשב כותרת.
+   ============================================================ */
+const HEAD_WORDS = new Set([
+  "שם", "שם מלא", "שם החניך", "שם פרטי", "שם משפחה",
+  "ת.ז", "ת\"ז", "ת״ז", "תעודת זהות", "תז", "מספר זהות",
+  "מגדר", "מין", "טלפון", "נייד", "פלאפון", "טלפון נייד",
+  "עיר", "יישוב", "ישוב", "כתובת",
+  "מייל", "אימייל", "דואל", "דוא\"ל", "דוא״ל", "אימייל אישי",
+  "תפקיד", "תאריך", "סוג", "סוג היום", "נושא", "מרצה", "יום",
+  "שעה", "יום ושעה", "מחיר", "מחיר למפגש", "קטגוריה", "מכסה",
+  "הערות", "מידת חולצה", "תאריך לידה", "אלרגיה",
+  "name", "id", "phone", "email", "city", "gender", "date",
+  "kind", "subject", "role", "price", "capacity", "category",
+]);
+
+function isHeaderRow(raw) {
+  const c = cells(raw);
+  if (c.length < 2) return false;
+  /* ⚠ תא אחד שנראה כמו נתון פוסל את כל השורה */
+  for (const x of c) {
+    if (ID_RE.test(x)) return false;
+    if (PHONE_RE.test(x.replace(/-/g, ""))) return false;
+    if (toISO(x)) return false;
+  }
+  const hits = c.filter((x) => HEAD_WORDS.has(clean(x).toLowerCase()) || HEAD_WORDS.has(clean(x)));
+  return hits.length >= 2 && hits.length >= Math.ceil(c.length / 2);
+}
+
+/** שורות לא ריקות, עם מספר השורה המקורי, בלי שורת הכותרות */
 function lines(text) {
-  return String(text || "").split(/\r?\n/)
+  const list = String(text || "").split(/\r?\n/)
     .map((raw, i) => ({ n: i + 1, raw }))
     .filter((l) => clean(l.raw).length > 0);
+
+  if (list.length > 1 && isHeaderRow(list[0].raw)) {
+    const [head, ...rest] = list;
+    return { list: rest, header: clean(head.raw) };
+  }
+  return { list, header: null };
 }
 
 const cells = (raw) => raw.split(SPLIT).map(clean).filter((c) => c.length > 0);
@@ -113,7 +159,8 @@ export const PARSERS = {
 
     parse(text) {
       const rows = [], bad = [];
-      for (const { n, raw } of lines(text)) {
+      const { list, header } = lines(text);
+      for (const { n, raw } of list) {
         const c = cells(raw);
         if (!c.length) continue;
 
@@ -142,7 +189,7 @@ export const PARSERS = {
           city, active: true,
         });
       }
-      return dedupe(rows, bad, (r) => r.nationalId || r.name, "כבר מופיע בהדבקה");
+      return dedupe(rows, bad, (r) => r.nationalId || r.name, "כבר מופיע ברשימה", header);
     },
   },
 
@@ -156,7 +203,8 @@ export const PARSERS = {
 
     parse(text) {
       const rows = [], bad = [];
-      for (const { n, raw } of lines(text)) {
+      const { list, header } = lines(text);
+      for (const { n, raw } of list) {
         const c = cells(raw);
         if (!c.length) continue;
         const email = c.find((x) => x.includes("@")) || null;
@@ -170,7 +218,7 @@ export const PARSERS = {
           active: true, _roleText: roleText,
         });
       }
-      return dedupe(rows, bad, (r) => r.name, "כבר מופיע בהדבקה");
+      return dedupe(rows, bad, (r) => r.name, "כבר מופיע ברשימה", header);
     },
   },
 
@@ -184,7 +232,8 @@ export const PARSERS = {
 
     parse(text) {
       const rows = [], bad = [];
-      for (const { n, raw } of lines(text)) {
+      const { list, header } = lines(text);
+      for (const { n, raw } of list) {
         const c = cells(raw);
         if (!c.length) continue;
 
@@ -210,7 +259,7 @@ export const PARSERS = {
         if (!date) { bad.push({ n, raw, why: "לא נמצא תאריך" }); continue; }
         rows.push({ date, kind });
       }
-      return dedupe(rows, bad, (r) => r.date, "התאריך מופיע פעמיים");
+      return dedupe(rows, bad, (r) => r.date, "התאריך מופיע פעמיים", header);
     },
   },
 
@@ -224,7 +273,8 @@ export const PARSERS = {
 
     parse(text) {
       const rows = [], bad = [];
-      for (const { n, raw } of lines(text)) {
+      const { list, header } = lines(text);
+      for (const { n, raw } of list) {
         const c = cells(raw);
         if (!c.length) continue;
         const subject = c[0];
@@ -240,7 +290,7 @@ export const PARSERS = {
           active: true,
         });
       }
-      return dedupe(rows, bad, (r) => r.subject, "הנושא מופיע פעמיים");
+      return dedupe(rows, bad, (r) => r.subject, "הנושא מופיע פעמיים", header);
     },
   },
 
@@ -254,7 +304,8 @@ export const PARSERS = {
 
     parse(text) {
       const rows = [], bad = [];
-      for (const { n, raw } of lines(text)) {
+      const { list, header } = lines(text);
+      for (const { n, raw } of list) {
         const c = cells(raw);
         if (!c.length) continue;
         const name = c[0];
@@ -271,7 +322,7 @@ export const PARSERS = {
           period: "yearly",
         });
       }
-      return dedupe(rows, bad, (r) => r.name, "השם מופיע פעמיים");
+      return dedupe(rows, bad, (r) => r.name, "השם מופיע פעמיים", header);
     },
   },
 };
@@ -281,7 +332,7 @@ export const PARSERS = {
  *   נכתבת פעמיים. כפילות מול מה שכבר בבסיס הנתונים נבדקת
  *   בשרת — היא «כבר קיים» ואינה שגיאה.
  */
-function dedupe(rows, bad, keyOf, why) {
+function dedupe(rows, bad, keyOf, why, header = null) {
   const seen = new Set();
   const out = [];
   for (const r of rows) {
@@ -290,7 +341,7 @@ function dedupe(rows, bad, keyOf, why) {
     if (k) seen.add(k);
     out.push(r);
   }
-  return { rows: out, bad };
+  return { rows: out, bad, header };
 }
 
 export const parserKeys = () => Object.keys(PARSERS);

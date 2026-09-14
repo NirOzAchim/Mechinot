@@ -53,8 +53,19 @@ export function fileEngine(file) {
     return cache;
   }
 
-  function save() {
-    const s = load();
+  /* ⚠⚠⚠ **המצב לכתיבה מגיע כארגומנט, ולא מ-`load()`.**
+     בגרסה הראשונה `save()` קרא ל-`load()` תמיד, ו-`reset()`
+     שהחליף את המטמון באובייקט ריק **נמחק על ידי הקריאה
+     הזו**: בתהליך טרי `stamp` הוא 0, `load()` החליט שהקובץ
+     השתנה מבחוץ, קרא אותו מהדיסק חזרה לתוך המטמון — וכתב
+     את כל הנתונים הישנים בחזרה.
+
+     התוצאה הייתה `--force` ש**מדפיס «אופס» ואינו מאפס**:
+     זריעה חוזרת הכפילה 240 שורות תורנות ו-115 מפגשים, בלי
+     שום שגיאה ובלי שום סימן. סקריפט שיוצא 0 אינו עדות לכך
+     שהוא עבד. */
+  function save(state) {
+    const s = state || load();
     mkdirSync(dirname(path), { recursive: true });
     const tmp = path + ".tmp";
     writeFileSync(tmp, JSON.stringify(s, null, 2), "utf8");
@@ -103,7 +114,8 @@ export function fileEngine(file) {
 
     async reset() {
       cache = empty();
-      save();
+      /* ⚠ מועבר במפורש — ראו ההערה על `save`. */
+      save(cache);
     },
   };
 }

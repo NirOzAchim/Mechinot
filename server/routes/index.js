@@ -23,6 +23,7 @@ import * as people from "./people.js";
 import * as attendance from "./attendance.js";
 import * as requests from "./requests.js";
 import * as studio from "./studio.js";
+import * as roles from "./roles.js";
 import * as nav from "./nav.js";
 
 export const ROUTES = {
@@ -58,6 +59,18 @@ export const ROUTES = {
   "studio/commit": { POST: guard(studio.commit, { screen: "settings" }) },
   "studio/invite": { POST: guard(studio.invite, { screen: "settings" }) },
 
+  /* ---------- תפקידים ----------
+     ⚠⚠ **הקריאה פתוחה לכל מי שרואה את «הגדרות», והכתיבה
+     לראש המכינה בלבד** — וההבחנה **בתוך** ההנדלר (`gate`)
+     ולא בשער. `guard` אינו יודע לומר «לקרוא כן, לכתוב לא»,
+     ושתי נקודות קצה לאותה רשימה היו מתפצלות. */
+  "roles/list": { GET: guard(roles.list, { screen: "settings" }) },
+  "roles/save": { PUT: guard(roles.save, { screen: "settings" }) },
+  "roles/delete": { POST: guard(roles.remove, { screen: "settings" }) },
+  /* ⚠ שיוך תפקיד לאדם — אותו שער, כי מי שיכול להעניק תפקיד
+     ניהולי יכול לפתוח לעצמו הכול דרך אדם אחר. */
+  "roles/assign": { POST: guard(roles.assign, { screen: "settings" }) },
+
   /* ---------- אנשים ---------- */
   "people/list": { GET: guard(people.list, { screen: "people" }) },
   "people/me": { GET: guard(people.myProfile) },
@@ -79,6 +92,9 @@ export const ROUTES = {
      «המדריך של החניך הזה **או** ראש המכינה», והוא נבדק
      בהנדלר מול השלב שהבקשה נמצאת בו. */
   "requests/decide": { POST: guard(requests.decide, { screen: "requests" }) },
+  /* ⚠ מסלול נפרד מ-`update`, ובכוונה: `update` דוחה בקשה
+     שהוכרעה, והערר קיים **רק** עליהן. */
+  "requests/appeal": { POST: guard(requests.appeal, { screen: "requests" }) },
 };
 
 /* ============================================================

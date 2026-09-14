@@ -146,6 +146,14 @@ export const api = {
   importCommit: (kind, text) => call("studio/commit", { method: "POST", body: { kind, text } }),
   invite: (person, username) => call("studio/invite", { method: "POST", body: { person, username } }),
 
+  /* ---- תפקידים ----
+     ⚠ **המצב הרצוי ולא «הוסף/הסר»** ב-`assignRoles`: שניים
+     שעורכים את אותו אדם מקבלים תוצאה שלמה ולא חצי מכל אחד. */
+  roles: () => call("roles/list"),
+  roleSave: (role) => call("roles/save", { method: "PUT", body: role }),
+  roleDelete: (slug, force) => call("roles/delete", { method: "POST", body: { slug, force } }),
+  assignRoles: (person, roles) => call("roles/assign", { method: "POST", body: { person, roles } }),
+
   /* ---- אנשים ---- */
   people: (kind = "student") => call(`people/list?kind=${encodeURIComponent(kind)}`),
   myProfile: () => call("people/me"),
@@ -163,8 +171,13 @@ export const api = {
   requestCreate: (f) => call("requests/create", { method: "POST", body: f }),
   requestUpdate: (f) => call("requests/update", { method: "PUT", body: f }),
   requestDelete: (id) => call("requests/delete", { method: "POST", body: { id } }),
-  requestDecide: (id, approve, charge) =>
-    call("requests/decide", { method: "POST", body: { id, approve, charge } }),
+  /* ⚠ `redo` הוא שינוי החלטה שכבר ניתנה — ראש המכינה בלבד,
+     ורק מהכפתור שאחריו אישור שאומר מה ישתנה. */
+  requestDecide: (id, approve, charge, redo = false) =>
+    call("requests/decide", { method: "POST", body: { id, approve, charge, redo } }),
+  /* ⚠ הערר אינו משנה את הסטטוס — ראו server/routes/requests.js */
+  requestAppeal: (id, appeal) =>
+    call("requests/appeal", { method: "POST", body: { id, appeal } }),
 };
 
 /* ============================================================

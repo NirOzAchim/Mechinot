@@ -105,7 +105,9 @@ function fail(res, name, e) {
 async function handleAdmin(req, res, url) {
   const name = url.pathname.slice("/api/".length);
   const route = ADMIN_ROUTES[name];
-  if (!route) return send(res, 404, { error: `אין נקודת קצה בשם «${name}»` });
+  /* ⚠ מתויג, כדי שהלקוח יוכל להבדיל בין «אין כזו נקודה» לבין
+     404 אמיתי על משאב. ראו client/api.js. */
+  if (!route) return send(res, 404, { error: `אין נקודת קצה בשם «${name}»`, unknownEndpoint: true });
   const handler = route[req.method];
   if (!handler) return send(res, 405, { error: "שיטה לא נתמכת" });
 
@@ -127,7 +129,7 @@ async function handleAdmin(req, res, url) {
    ============================================================ */
 async function handleTenantApi(req, res, url, slug, rest) {
   const route = ROUTES[rest];
-  if (!route) return send(res, 404, { error: `אין נקודת קצה בשם «${rest}»` });
+  if (!route) return send(res, 404, { error: `אין נקודת קצה בשם «${rest}»`, unknownEndpoint: true });
   const handler = route[req.method];
   if (!handler) return send(res, 405, { error: "שיטה לא נתמכת" });
 

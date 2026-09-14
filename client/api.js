@@ -15,6 +15,33 @@
      שהמכינה ריקה.
    ============================================================ */
 
+/* ============================================================
+   ⚠⚠⚠ שרת ישן מהמסך
+   ------------------------------------------------------------
+   Vite מגיש את קבצי הלקוח **מהדיסק**, ותהליך ה-Node טוען את
+   המסלולים שלו **בעלייה**. אחרי `git pull` על שרת שכבר רץ,
+   הדפדפן מקבל מסך חדש מול שרת ישן — והמסך קורא לנקודת קצה
+   שלא הייתה קיימת כשהשרת עלה.
+
+   ההודעה הגולמית היא «אין נקודת קצה בשם admin/state»: היא
+   מתארת את הסימפטום במדויק ושולחת לחפש באג בקוד שאין בו באג.
+   זה קרה בפועל, ובזבז זמן.
+
+   ⚠ **404 מתויג ולא כל 404.** לנקודות הקצה של המכינה יש
+     404 לגיטימיים לגמרי — בקשה של חניך אחר, מכינה שאינה
+     קיימת — ולכן השרת מסמן במפורש `unknownEndpoint` ורק
+     הוא מתורגם כך.
+   ============================================================ */
+const STALE_SERVER =
+  "השרת שרץ ישן מהמסך. יש לסגור את חלון השרת ולהריץ שוב את start.cmd";
+
+function staleError(data, status) {
+  const e = new Error(STALE_SERVER);
+  e.status = status;
+  e.stale = true;
+  return e;
+}
+
 let onUnauthorized = () => {};
 export const setUnauthorizedHandler = (fn) => { onUnauthorized = fn; };
 
@@ -84,6 +111,8 @@ async function call(path, { method = "GET", body } = {}) {
     e.status = 401;
     throw e;
   }
+
+  if (res.status === 404 && data?.unknownEndpoint) throw staleError(data, 404);
 
   if (!res.ok) {
     const e = new Error(data?.error || `שגיאה ${res.status}`);
@@ -162,6 +191,11 @@ async function callAdmin(path, { method = "GET", body } = {}) {
 
   let data = null;
   try { data = await res.json(); } catch { /* גוף ריק */ }
+
+  /* ⚠⚠ בקונסולה **כל** 404 הוא שרת ישן: כל נקודות הקצה שלה
+     קיימות, ושרת מלפני הקונסולה אינו מכיר אף אחת מהן — כולל
+     שרת ישן כל כך שאינו יודע לתייג `unknownEndpoint`. */
+  if (res.status === 404) throw staleError(data, 404);
 
   if (!res.ok) {
     const e = new Error(data?.error || `שגיאה ${res.status}`);

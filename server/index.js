@@ -214,6 +214,15 @@ const server = createServer(async (req, res) => {
    ואז מי שציפה למכינה אחת קיבל אחרת — בלי שום רמז. שרת
    שעולה ואינו אומר במה הוא עובד הוא שרת שאפשר לבזבז מולו
    חצי שעה על «למה השם לא נכון».
+
+   ⚠⚠ **והוא באנגלית, בכוונה.** לקונסולת ווינדוס אין תמיכה
+     ב-bidi: עברית שמודפסת שם יוצאת הפוכה תו-תו, נראית שבורה,
+     ואי אפשר לקרוא את השורה האחת שאומרת מה לעשות. נתפס
+     בצילום מסך מהמשתמש. **האפליקציה בעברית; החלון הזה לא.**
+
+   ⚠ שמות המכינות הם נתון ולכן נשארים כפי שהם — הם יוצאים
+     הפוכים בווינדוס, וזה מקובל: מה שצריך משורה כזו הוא
+     **הכתובת**, והיא לטינית.
    ============================================================ */
 server.listen(PORT, () => {
   const base = `http://localhost:${PORT}`;
@@ -221,24 +230,25 @@ server.listen(PORT, () => {
   try { rows = listMechinot(); } catch (e) { console.error("[registry]", e.message); }
 
   console.log("");
-  console.log("  ╭──────────────────────────────────────────────────────╮");
-  console.log("  │  Mechinot                                            │");
-  console.log("  ╰──────────────────────────────────────────────────────╯");
-  console.log(`  קונסולה   ${base}/console`);
+  console.log("  ==========================================");
+  console.log("     M E C H I N O T");
+  console.log("  ==========================================");
+  console.log("");
+  console.log(`  Console   ${base}/console`);
   if (!rootExists()) {
-    console.log("            ⚠ עדיין אין מנהל-על — הקונסולה תבקש להקים אחד");
-    console.log("              (או:  npm run root -- --user <שם> --pass <סיסמה>)");
+    console.log("            [!] No root admin yet - the console will ask you to create one");
+    console.log("                (or:  npm run root -- --user <name> --pass <password>)");
   }
   console.log("");
   if (!rows.length) {
-    console.log("  אין עדיין אף מכינה. פותחים אחת מהקונסולה, או:");
-    console.log("    npm run seed                          מכינה מלאה לבדיקה");
-    console.log('    npm run new -- "שם" --slug <מזהה>      מכינה ריקה');
+    console.log("  No mechinot yet. Open one from the console, or:");
+    console.log("    npm run seed                           a full demo mechina");
+    console.log('    npm run new -- "<name>" --slug <slug>   an empty one');
   } else {
-    console.log(`  ${rows.length} מכינות:`);
+    console.log(`  ${rows.length} mechinot:`);
     for (const r of rows) {
-      const flag = r.archived ? "  (בארכיון)" : "";
-      console.log(`    ${base}/m/${r.slug}/   ${r.name}${flag}`);
+      const flag = r.archived ? "  (archived)" : "";
+      console.log(`    ${base}/m/${r.slug}/${" ".repeat(Math.max(1, 14 - r.slug.length))}${r.name}${flag}`);
     }
   }
   console.log("");

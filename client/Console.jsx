@@ -32,6 +32,10 @@ export function Console() {
 
   useEffect(() => { load(); }, [load]);
 
+  /* ⚠ כותרת הלשונית אומרת «קונסולה» ולא «מכינות». היא יושבת
+     לצד הלשוניות של המכינות עצמן, וכולן היו נראות אותו דבר. */
+  useEffect(() => { document.title = "Mechinot · קונסולה"; }, []);
+
   if (busy) return <Shell><div className="cskel" /><div className="cskel" /></Shell>;
 
   /* ⚠ כשל טעינה הוא מסך משלו עם «נסה שוב» — ולא רשימה ריקה
@@ -126,8 +130,13 @@ function Setup({ onDone }) {
       <button className="cbtn" disabled={busy || !user || !pw}>
         {busy ? "רגע…" : "יצירה"}
       </button>
+      {/* ⚠ פקודה לטינית בתוך פסקה עברית מוצגת בסדר הפוך ובלתי
+          קריאה. `dir="ltr"` על בלוק משלה, ולא בתוך המשפט. */}
       <div className="chint" style={{ marginTop: 12 }}>
-        אפשר גם בשרת: <code>npm run root -- --user &lt;שם&gt; --pass &lt;סיסמה&gt;</code>
+        אפשר גם בשרת:
+        <div className="mslug" style={{ marginTop: 4 }} dir="ltr">
+          npm run root -- --user &lt;שם&gt; --pass &lt;סיסמה&gt;
+        </div>
       </div>
     </form>
   );
@@ -177,6 +186,7 @@ function Dash({ st, reload }) {
   const [adding, setAdding] = useState(false);
   const [open, setOpen] = useState(null);
   const [msg, setMsg] = useState(null);
+  const [fresh, setFresh] = useState(null);
   const [showArch, setShowArch] = useState(false);
 
   const out = async () => { await admin.logout(); reload(); };
@@ -194,11 +204,30 @@ function Dash({ st, reload }) {
 
       {msg && <div className="cbanner ok">{msg}</div>}
 
+      {/* ⚠⚠ **אחרי יצירה, הדבר הבא שרוצים הוא להיכנס.** הודעת
+          הצלחה שמזכירה כתובת ואינה מקשרת אליה מאלצת להקליד
+          אותה ביד — וזו בדיוק הנקודה שבה מישהו מקליד שגוי
+          ומסיק שהיצירה נכשלה. */}
+      {fresh && (
+        <div className="cpanel" style={{ marginBottom: 14 }}>
+          <h2>«{fresh.mechina.name}» נפתחה</h2>
+          <p className="cmuted" style={{ margin: "6px 0 12px" }}>
+            יש בה חשבון אחד — <b dir="ltr">{fresh.account.username}</b> — ואפיון ריק.
+            מי שייכנס בו יקבל את האשף מעצמו.
+          </p>
+          <div className="crow">
+            <a className="cbtn" href={fresh.url}>פתיחת האפליקציה</a>
+            <button className="cbtn ghost" onClick={() => setFresh(null)}>סגירה</button>
+          </div>
+        </div>
+      )}
+
       {adding && (
         <NewMechina presets={st.presets}
           onDone={(r) => {
             setAdding(false);
-            setMsg(`«${r.mechina.name}» נוצרה — ${r.url}`);
+            setMsg(null);
+            setFresh(r);
             reload();
           }} />
       )}

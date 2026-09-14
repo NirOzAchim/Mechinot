@@ -123,6 +123,9 @@ h3{margin:0; font-size:15px; font-weight:700}
   background:var(--c-accent); color:var(--c-accent-ink);
   transition:filter .12s var(--c-ease);
 }
+/* ~ a.cbtn נראה כמו קישור ולא ככפתור ~
+   קו תחתון וצבע ברירת מחדל מחזירים אותו למראה של טקסט. */
+a.cbtn{text-decoration:none; display:inline-block; line-height:1.4}
 .cbtn:hover{filter:brightness(1.08)}
 .cbtn:disabled{opacity:.45; cursor:not-allowed}
 .cbtn.ghost{background:transparent; border-color:var(--c-line); color:var(--c-ink)}

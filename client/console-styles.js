@@ -159,6 +159,20 @@ a.cbtn{text-decoration:none; display:inline-block; line-height:1.4}
 .cbanner.info{color:var(--c-muted)}
 
 .cempty{text-align:center; padding:44px 20px; color:var(--c-muted)}
+/* ⚠⚠ **פקודה שמוצגת במסך היא פקודה שאפשר להעתיק.** תיקיית
+   הנתונים אינה בגיט — ובמכוון: שם יושבים הנתונים של כל
+   הלקוחות. המשמעות היא שקלון טרי מגיע לקונסולה **ריקה**,
+   וזה נראה בדיוק כמו התקנה שנכשלה. נתפס במחשב חדש, אחרי
+   שההוראות כן אמרו את זה ואיש לא קרא אותן — כי המסך שמול
+   העיניים לא אמר כלום.
+
+   ⚠ ואין בקטיקים בהערה הזו, כי הקובץ הוא מחרוזת תבנית אחת
+     ובקטיק סוגר אותה. זה קרה כאן בדיוק ברגע שנכתבה. */
+.ccmd{display:inline-block; direction:ltr; margin-top:4px;
+  font-family:ui-monospace,Menlo,Consolas,monospace; font-size:13px;
+  background:var(--c-sunk,rgba(255,255,255,.05)); color:var(--c-ink);
+  border:1px solid var(--c-line); border-radius:8px; padding:6px 12px;
+  user-select:all}
 .cskel{
   height:62px; border-radius:var(--c-r); margin-bottom:10px;
   background:linear-gradient(90deg,var(--c-panel),var(--c-panel2),var(--c-panel));

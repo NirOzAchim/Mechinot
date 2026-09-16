@@ -17,7 +17,8 @@
     "check:static": "node tools/check.mjs",
     "check:tenancy": "node tools/check-tenancy.mjs",
     "new": "node tools/new-mechina.mjs",
-    "root": "node tools/root.mjs"
+    "root": "node tools/root.mjs",
+    "verify": "sh tools/verify.sh"
   },
   "dependencies": {
     "react": "18.3.1",

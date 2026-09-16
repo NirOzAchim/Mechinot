@@ -52,6 +52,9 @@ export const ENUMS = {
   personKind: ["student", "staff"],
   gender: ["male", "female", "other"],
 
+  /* ⚠ **נשארת כתיעוד של ברירת המחדל בלבד** — `calendarDay.kind`
+     כבר אינו `enum`. ראו core/day-types.js. מי שיחזיר אותה
+     לסכימה נועל שוב את מה שנפתח. */
   dayKind: ["regular", "series", "trip", "home", "holiday", "closed", "noroutine"],
 
   /* ⚠ **`unmarked` הוא ערך ולא היעדר ערך.** «לא סומן» ו«נעדר»
@@ -201,7 +204,13 @@ export const ENTITIES = {
     fields: {
       id: id(),
       date: req("date", { unique: true }),
-      kind: req("enum", { enum: "dayKind", default: "regular" }),
+      /* ⚠⚠⚠ **טקסט ולא `enum`, ובכוונה.** סוגי הימים הם נתון
+         של המכינה (`core/day-types.js`) ולא רשימה בקוד: לאחת
+         יש «יום מיון», לשנייה «שבת בחוץ». `enum` כאן פירושה
+         שכל מכינה שלישית דורשת דיפלוי.
+         ⚠ **והאימות עבר לשכבת הנתיב**, מול האפיון — לא נעלם.
+           ראו server/routes/attendance.js. */
+      kind: req("text", { default: "regular", note: "slug של סוג יום מהאפיון" }),
       note: f("text"),
     },
   },

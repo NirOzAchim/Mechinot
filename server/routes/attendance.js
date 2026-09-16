@@ -19,6 +19,7 @@
 
 import { DataError } from "../data/store.js";
 import { counted } from "./people.js";
+import { dayType, dayLabel, countsForAttendance } from "../../core/day-types.js";
 
 /** ⚠ שעון ישראל ולא שעון השרת. שרת ב-UTC הופך ערב ליום הבא. */
 export function todayISO(tz = "Asia/Jerusalem") {
@@ -68,6 +69,14 @@ export async function day({ db, query, profile, user }) {
        ושולח לחפש תקלה שאינה קיימת. */
     inYear: Boolean(calDay),
     kind: calDay?.kind || null,
+    /* ⚠⚠ **התווית וההתנהגות מגיעות מהאפיון** ולא מרשימה בקוד:
+       סוגי הימים הם נתון של המכינה. ראו core/day-types.js. */
+    kindLabel: calDay ? dayLabel(profile, calDay.kind) : null,
+    /* ⚠ **סוג שנמחק מהאפיון מדווח ואינו נבלע.** נפילה שקטה
+       ל«יום רגיל» הייתה מכניסה למכנה יום שהמכינה הוציאה
+       ממנו — כלומר משנה אחוזי נוכחות של כולם בלי שגיאה. */
+    kindUnknown: Boolean(calDay && !dayType(profile, calDay.kind)),
+    counts: calDay ? countsForAttendance(profile, calDay.kind) : false,
     marked: Boolean(attDay),
     markedAt: attDay?.markedAt || null,
     people: rows,
@@ -94,6 +103,22 @@ export async function mark({ db, body, user, profile }) {
   for (const c of changes) {
     if (!c?.person) throw new DataError("סימון בלי מזהה אדם");
     if (!allowed.has(c.status)) throw new DataError(`מצב לא מוכר: ${c.status}`);
+  }
+
+  /* ⚠⚠ **סימון ביום שאין בו מכינה נחסם ברעש.** סופ״ש בית
+     שסומנה בו נוכחות מייצר יום במכנה שאיש לא היה אמור להיות
+     בו — ואז כל המכינה יורדת באחוז על יום שלא היה. הסוג
+     נלקח **מלוח השנה** ולא מגוף הבקשה. */
+  const cal = await db.find("calendarDay", { date });
+  if (cal) {
+    const t = dayType(profile, cal.kind);
+    if (!t) {
+      throw new DataError(
+        `ליום הזה סוג «${cal.kind}» שאינו קיים באפיון — יש לתקן אותו בהגדרות סוגי הימים`);
+    }
+    if (!t.school) {
+      throw new DataError(`«${t.label}» אינו יום מכינה, ואי אפשר לסמן בו נוכחות`);
+    }
   }
 
   let attDay = await db.find("attendanceDay", { date });
@@ -138,8 +163,33 @@ export async function summarize(db, profile, personId) {
   const marks = await db.list("attendanceMark", { where: { person: personId } });
   const byDay = new Map(marks.map((m) => [m.day, m.status]));
 
-  let present = 0, absent = 0, marked = 0;
+  /* ============================================================
+     ⚠⚠⚠ **המכנה מסונן לפי סוג היום, בזמן החישוב.**
+     ------------------------------------------------------------
+     קודם נספר **כל תאריך שיש לו שורת סימון**. יום שסומן ואז
+     השתנה סוגו — לטיול, לחופשה, ל«לא התקיימה שגרה» — נשאר
+     במכנה **לנצח**, כי השורה עדיין קיימת. חניך הופיע על 0/1
+     ביום שלא הייתה בו מכינה.
+
+     עכשיו הסינון בזמן החישוב, ולכן שינוי סוג היום מתקן את
+     האחוז **מיד ולמפרע**, בלי לגעת בשום שורה. יום כזה משאיר
+     את החניך על 0/0.
+
+     ⚠ **וסוג שאינו מוכר אינו נספר, ומדווח.** נפילה שקטה
+       ל«נספר» הייתה מחזירה בדיוק את הבאג. */
+  const cal = await db.list("calendarDay");
+  const kindOf = new Map(cal.map((c) => [c.date, c.kind]));
+
+  let present = 0, absent = 0, marked = 0, skipped = 0, unknownKind = 0;
   for (const d of days) {
+    const kind = kindOf.get(d.date);
+    const t = kind ? dayType(profile, kind) : null;
+    if (kind && !t) { unknownKind++; continue; }
+    /* ⚠ יום שאינו בלוח השנה כלל **כן** נספר: הוא סומן, כלומר
+       הייתה בו מכינה, ומי ששכח להוסיף אותו ללוח לא אמור
+       למחוק בכך את הנוכחות של כולם. */
+    if (t && !t.counts) { skipped++; continue; }
+
     const s = byDay.get(d.id);
     if (!s || s === "unmarked") continue;
     marked++;
@@ -152,6 +202,11 @@ export async function summarize(db, profile, personId) {
   return {
     markedDays: marked,
     present, absent,
+    /* ⚠ **מה שהוצא מהמכנה נאמר.** «17 ימים» כשיש 24 שורות
+       בלוח נראה כמו נתון חסר; «7 ימים שאינם נספרים» הוא
+       הסבר. ראו ההערה על הסינון. */
+    notCounted: skipped,
+    unknownKind,
     pct: marked >= min ? Math.round((present / marked) * 100) : null,
     /* ⚠ נאמר במפורש כמה חסר עד שהאחוז יוצג, כדי שמי שרואה
        «—» יבין שזו התחלת שנה ולא תקלה. */

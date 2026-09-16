@@ -91,6 +91,18 @@ export function Login({ brand, notice, onIn }) {
             {busy ? "רגע…" : "כניסה"}
           </button>
         </form>
+
+        {/* ⚠⚠ **למי פונים כשנתקעים — נוסח של המכינה, לא שלנו.**
+            «שכחתי סיסמה» גנרי שולח לשום מקום; הבלוק הזה נערך
+            על ידי ראש המכינה ויוצא מ-`profile/public`, שהיא
+            נקודת הקצה היחידה שנקראת לפני שיש סשן.
+            ⚠ ולא נכתב — לא מוצג כלל. */}
+        {brand?.signinNote && (
+          <p className="tiny" style={{ textAlign: "center", marginTop: "var(--s4)",
+            whiteSpace: "pre-wrap", lineHeight: 1.6 }}>
+            {brand.signinNote}
+          </p>
+        )}
       </div>
     </div>
   );

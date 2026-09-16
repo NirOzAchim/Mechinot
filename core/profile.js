@@ -23,6 +23,7 @@
 
 import { ENUMS, schemaModules } from "./schema.js";
 import { MODULE_CATALOG, coreModules } from "./catalog.js";
+import { DEFAULT_DAY_TYPES, validateDayTypes } from "./day-types.js";
 
 /* ============================================================
    שכבה 3 — המבנה. קבוע, ומוצהר.
@@ -57,8 +58,12 @@ export const VOCAB_KEYS = [
   "team.branch", "team.series", "team.committee", "team.group", "team.adhoc",
   "term.first", "term.second", "term.yearly",
   "absence.vacation", "absence.sick", "absence.justified",
-  "day.regular", "day.series", "day.trip", "day.home",
-  "day.holiday", "day.closed", "day.noroutine",
+  /* ⚠⚠ **סוגי הימים ירדו מכאן והם ב-`profile.dayTypes`.** התווית
+     ישבה כאן והדגלים (האם יש מכינה, האם נספר) ישבו בקוד —
+     שתי רשימות מקבילות על אותו דבר, שמתפצלות בתוספת הראשונה.
+     עכשיו סוג יום הוא שורה אחת שנושאת את שמו ואת התנהגותו.
+     ⚠ מפתחות `day.*` שנשארו בדלתא של מכינה קיימת אינם מזיקים
+       ומדווחים כ«מונח שאינו בשימוש». */
   "unit.week", "unit.day", "unit.session",
 ];
 
@@ -140,6 +145,14 @@ export function resolveProfile(preset, delta = {}) {
     merged.roles = [...fromPreset, ...roles];
   }
 
+  /* ⚠⚠ **סוגי הימים חייבים להתקיים.** מכינה שנפתחה לפני
+     שהשדה היה קיים אין לו בדלתא, ורשימה ריקה פירושה שכל יום
+     בלוח השנה נושא סוג שאינו מוכר — כלומר אחוז נוכחות ריק
+     לכולם, בלי שגיאה. אותו דפוס בדיוק כמו תפקיד הבסיס. */
+  if (!Array.isArray(merged.dayTypes) || !merged.dayTypes.length) {
+    merged.dayTypes = DEFAULT_DAY_TYPES.map((d) => ({ ...d }));
+  }
+
   return merged;
 }
 
@@ -215,6 +228,11 @@ export function validateProfile(p) {
   }
   if (!y.start || !y.end) W("לא הוגדרו תאריכי שנה — מסכים שתלויים בהם יהיו ריקים");
 
+  /* ---------- סוגי ימים ----------
+     ⚠ **אותה ולידציה שמסלול העריכה קורא לה**, ולא עותק שני —
+     ראו core/day-types.js. */
+  for (const e of validateDayTypes(p.dayTypes)) E(e);
+
   return { ok: errors.length === 0, errors, warnings };
 }
 
@@ -232,6 +250,11 @@ export const WIZARD_STEPS = [
     desc: "אילו תפקידים קיימים ומה כל אחד פותח" },
   { key: "modules", title: "מודולים", required: false,
     desc: "מה דלוק ומה לא" },
+  /* ⚠ **לא חובה, ובכוונה**: ברירת המחדל עובדת לרוב המכינות,
+     ומי שצריך «יום מיין» מגיע לכאן כשהוא צריך. שלב חובה
+     שאפשר לדלג עליו בפועל מאמן לדלג גם על אלה שאי אפשר. */
+  { key: "days", title: "סוגי ימים", required: false,
+    desc: "איך המכינה מחלקת את השנה, ומה נספר באחוז" },
   { key: "year", title: "מבנה השנה", required: true,
     desc: "תאריכים, סמסטרים ומכסות" },
   { key: "people", title: "אנשים", required: false,

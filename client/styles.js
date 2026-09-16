@@ -438,6 +438,14 @@ const BITS = `
 .item .nm{ font-weight:600; }
 .item.on{ border-color:var(--accent); background:var(--a-soft); }
 .item.dim{ opacity:.55; }
+/* ⚠ **גם לבדה.** הגדרה על .item.dim בלבד פירושה ש-.chk.dim
+   או .card.dim אינם עושים דבר — מחלקה שקיימת בגיליון, עוברת
+   את הבדיקה, ואינה משנה כלום על המסך. זה בדיוק סוג הכלל
+   שנראה עובד ואינו.
+   ⚠⚠ ואין בקטיקים בהערה הזו: הקובץ הוא מחרוזת תבנית אחת,
+     ובקטיק סוגר אותה. זה קרה כאן בדיוק כשהיא נכתבה — ובפעם
+     הזו צינור אל tail הסתיר את כשל הבדיקה, והקומיט יצא שבור. */
+.dim{ opacity:.55; }
 
 .bar{ height:6px; border-radius:999px; background:var(--sand); overflow:hidden; }
 .bar>i{ display:block; height:100%; border-radius:999px;

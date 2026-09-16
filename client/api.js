@@ -167,6 +167,14 @@ export const api = {
 
   summary: () => call("attendance/summary"),
 
+  /* ---- סוגי ימים ----
+     ⚠ נתון של המכינה ולא רשימה בקוד — ראו core/day-types.js. */
+  dayTypes: () => call("daytypes/list"),
+  dayTypesSave: (types, force) =>
+    call("daytypes/save", { method: "PUT", body: { types, force } }),
+  dayTypeRemap: (from, to) =>
+    call("daytypes/remap", { method: "POST", body: { from, to } }),
+
   /* ---- נוכחות ---- */
   day: (date) => call(`attendance/day${date ? `?date=${date}` : ""}`),
   /* ⚠ מצב רצוי ולא «הפוך» — שניים שמסמנים יחד מקבלים אותה

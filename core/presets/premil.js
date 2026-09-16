@@ -11,6 +11,7 @@
    ============================================================ */
 
 import { ROLE_CATALOG, MODULE_CATALOG, allModules } from "../catalog.js";
+import { DEFAULT_DAY_TYPES } from "../day-types.js";
 
 export const preset = "premil";
 
@@ -115,6 +116,12 @@ export const PREMIL = {
        ולא בסכום ימי-אדם. */
     minMarkedDays: 5,
   },
+
+  /* ---------- סוגי ימים ----------
+     ⚠⚠ **נתון של המכינה ולא רשימה בקוד.** לאחת יש «יום מיון»
+       ולשנייה «שבת בחוץ»; רשימה סגורה פירושה שכל מכינה
+       שלישית דורשת דיפלוי. ראו core/day-types.js. */
+  dayTypes: DEFAULT_DAY_TYPES.map((d) => ({ ...d })),
 
   /* ---------- תחומי מלאי ----------
      ⚠ slug + label, כמו כל השאר. מכינה בלי מכולה תמחק שורה. */

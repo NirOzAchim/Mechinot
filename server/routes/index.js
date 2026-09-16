@@ -26,6 +26,7 @@ import * as requests from "./requests.js";
 import * as studio from "./studio.js";
 import * as roles from "./roles.js";
 import * as content from "./content.js";
+import * as dayTypes from "./day-types.js";
 import * as nav from "./nav.js";
 
 export const ROUTES = {
@@ -86,6 +87,17 @@ export const ROUTES = {
   /* ---------- אנשים ---------- */
   "people/list": { GET: guard(people.list, { screen: "people" }) },
   "people/me": { GET: guard(people.myProfile) },
+
+  /* ---------- סוגי ימים ----------
+     ⚠⚠ **הקריאה פתוחה לכל מחובר** — התווית של סוג היום מופיעה
+     בכל מסך נוכחות, ולכן כל מסך צריך אותה. הכתיבה היא ראש
+     המכינה בלבד, ונאכפת בהנדלר: היא משנה את חישוב הנוכחות
+     של כל המכינה ולכל השנה. */
+  "daytypes/list": { GET: guard(dayTypes.list) },
+  "daytypes/save": { PUT: guard(dayTypes.save, { screen: "settings" }) },
+  /* ⚠ תיקון סוג יתום — בלעדיו סוג שנמחק בטעות משאיר ימים
+     שאין שום מסך שמגיע אליהם. */
+  "daytypes/remap": { POST: guard(dayTypes.remap, { screen: "settings" }) },
 
   /* ---------- נוכחות ---------- */
   "attendance/day": { GET: guard(attendance.day, { screen: "attendance" }) },

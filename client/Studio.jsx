@@ -19,10 +19,11 @@ import React, { useEffect, useState, useCallback } from "react";
 import { api } from "./api.js";
 import { applyTheme } from "./styles.js";
 import { Paste } from "./Paste.jsx";
+import { DayTypes } from "./DayTypes.jsx";
 import * as MI from "./icons.jsx";
 import { Sec, Empty, Failed, Loading, Modal, Confirm, useToast, tone } from "./ui.jsx";
 
-const STEP_ORDER = ["identity", "vocab", "roles", "modules", "year", "people", "texts"];
+const STEP_ORDER = ["identity", "vocab", "roles", "modules", "year", "days", "people", "texts"];
 
 export function Studio({ onDone, embedded = false }) {
   const [st, setSt] = useState(null);
@@ -104,6 +105,7 @@ export function Studio({ onDone, embedded = false }) {
         {step === "roles" && <RolesStep reload={load} />}
         {step === "modules" && <Modules st={st} save={save} />}
         {step === "year" && <Year st={st} save={save} />}
+        {step === "days" && <DayTypes />}
         {step === "people" && <PeopleStep st={st} reload={load} />}
         {step === "texts" && <Texts st={st} save={save} />}
       </div>
@@ -211,7 +213,10 @@ const VOCAB_GROUPS = [
   { title: "אנשים", keys: ["person.student", "person.staff", "person.guide", "person.head"] },
   { title: "מסגרות", keys: ["team.branch", "team.series", "team.committee", "team.group", "team.adhoc"] },
   { title: "היעדרויות", keys: ["absence.vacation", "absence.sick", "absence.justified"] },
-  { title: "סוגי ימים", keys: ["day.regular", "day.series", "day.trip", "day.home", "day.holiday", "day.closed", "day.noroutine"] },
+  /* ⚠⚠ **סוגי הימים ירדו מאוצר המילים.** התווית ישבה כאן
+     והדגלים (האם יש מכינה, האם נספר) ישבו בקוד — שתי רשימות
+     מקבילות על אותו דבר. עכשיו יש להם שלב משלהם, וסוג יום
+     הוא שורה אחת שנושאת את שמו ואת התנהגותו. */
   { title: "תקופות ויחידות", keys: ["term.first", "term.second", "term.yearly", "unit.week", "unit.day", "unit.session"] },
 ];
 

@@ -458,6 +458,75 @@ section("הגבול בין מכינות");
 }
 
 /* ============================================================
+   7ה. ⚠⚠⚠ סוגי הימים הם נתון ולא רשימה בקוד
+   ------------------------------------------------------------
+   הם היו `enum` קפואה בסכימה, וזו הייתה טעות: כל מכינה
+   מחלקת את השנה אחרת, ורשימה סגורה פירושה שכל מכינה שלישית
+   מגיעה עם בקשה שדורשת דיפלוי.
+
+   ⚠ **ומה שנבדק כאן הוא הכללים, לא הרשימה.** נעילה של שבעת
+     הסוגים שבתבנית הייתה נשברת בכל שינוי שלה, והבדיקה
+     הייתה נמחקת במקום להיקרא.
+   ============================================================ */
+section("סוגי ימים");
+
+{
+  const DT = await import("../core/day-types.js");
+  const { ENTITIES } = await import("../core/schema.js");
+
+  /* ⚠⚠ **הבדיקה החשובה כאן**: הרגע שבו מישהו יחזיר את
+     `enum` לסכימה הוא הרגע שבו הכול נסגר שוב — בלי שגיאה,
+     כי מכינה שלא הוסיפה סוג לא תרגיש בזה כלל. */
+  ok(ENTITIES.calendarDay.fields.kind.type === "text",
+    "calendarDay.kind חזר להיות enum — סוגי הימים ננעלו שוב בקוד");
+  ok(!ENTITIES.calendarDay.fields.kind.enum,
+    "calendarDay.kind נושא enum, כלומר המכינה אינה יכולה להוסיף סוג");
+
+  /* ⚠ שני הדגלים, והצירוף שאינו אפשרי */
+  ok(DT.validateDayTypes([{ slug: "a_b", label: "x", school: true, counts: true }]).length === 0,
+    "סוג יום תקין נדחה");
+  ok(DT.validateDayTypes([{ slug: "a_b", label: "x", school: false, counts: true }]).length > 0,
+    "«נספר באחוז» בלי «יש מכינה» חייב להידחות — הוא מוריד את האחוז על יום שלא היה");
+  ok(DT.validateDayTypes([{ slug: "a_b", label: "x", school: true, counts: false }]).length > 0,
+    "רשימה שאין בה אף סוג נספר חייבת להיאמר — האחוז יהיה ריק לכולם");
+  ok(DT.validateDayTypes([]).length > 0, "רשימה ריקה התקבלה");
+  ok(DT.validateDayTypes([
+    { slug: "a_b", label: "x", school: true, counts: true },
+    { slug: "a_b", label: "y", school: true, counts: true },
+  ]).length > 0, "סוג כפול התקבל");
+
+  /* ⚠⚠ **סוג שאינו מוכר מוחזר `null` ואינו נופל ל«רגיל».**
+     נפילה שקטה הייתה מכניסה למכנה יום שהמכינה הוציאה ממנו,
+     כלומר משנה אחוזי נוכחות של כולם בלי שגיאה. */
+  const p = { dayTypes: DT.DEFAULT_DAY_TYPES };
+  ok(DT.dayType(p, "no_such_type") === null,
+    "סוג שאינו מוכר נפל לברירת מחדל במקום להחזיר null");
+  ok(DT.countsForAttendance(p, "no_such_type") === false,
+    "סוג שאינו מוכר נספר באחוז");
+  ok(DT.countsForAttendance(p, "trip") === false,
+    "טיול נספר באחוז — היו בו כולם ואין רשימה");
+  ok(DT.isSchoolDay(p, "home") === false, "סופ״ש בית סומן כיום מכינה");
+  /* ⚠ סוג שנמחק מציג את המפתח ולא «—»: מי שרואה slug מבין
+     מיד שמישהו מחק סוג שעדיין בשימוש. */
+  ok(DT.dayLabel(p, "gone_type") === "gone_type",
+    "סוג שנמחק חייב להציג את המפתח שלו");
+
+  /* ⚠ פרופיל בלי `dayTypes` מקבל את ברירת המחדל — מכינה
+     שנפתחה לפני שהשדה היה קיים אינה מאבדת את הנוכחות שלה. */
+  const { resolveProfile } = await import("../core/profile.js");
+  const { PREMIL } = await import("../core/presets/premil.js");
+  const bare = resolveProfile(PREMIL, { identity: { name: "x" }, dayTypes: [] });
+  ok(bare.dayTypes?.length > 0,
+    "פרופיל בלי סוגי ימים לא קיבל את ברירת המחדל — כל יום בלוח נושא סוג לא מוכר");
+
+  /* ⚠ ואוצר המילים כבר אינו מכיל אותם — שתי רשימות מקבילות
+     על אותו דבר מתפצלות בתוספת הראשונה. */
+  const { VOCAB_KEYS } = await import("../core/profile.js");
+  ok(!VOCAB_KEYS.some((k) => k.startsWith("day.")),
+    "מפתחות day.* חזרו לאוצר המילים — התווית והדגלים בשני מקומות");
+}
+
+/* ============================================================
    8. הקטלוג עומד בפני עצמו
    ============================================================ */
 section("קטלוג המודולים");

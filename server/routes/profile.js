@@ -14,6 +14,7 @@
    קודמת ייבאה `readDelta`/`loadProfile` ברמת הקובץ, וזה
    היה נכון כל עוד פריסה = מכינה. ברגע שיש קונסולה, מצב
    ברמת המודול פירושו שמכינה אחת כותבת לדלתא של אחרת. */
+import { contentText } from "../../core/content.js";
 import { validateProfile, resolveProfile, WIZARD_STEPS, missingSteps, MODULES } from "../../core/profile.js";
 import { presetOf } from "../tenants.js";
 import { DataError } from "../data/store.js";
@@ -41,6 +42,16 @@ export async function publicProfile({ profile }) {
          בשלבי האשף. */
     setupNeeded: missingSteps(profile).map((k) =>
       WIZARD_STEPS.find((s) => s.key === k)?.title || k),
+    /* ⚠⚠ **ההערה במסך הכניסה יוצאת כאן ולא מ-`content/one`.**
+       זו נקודת הקצה היחידה שנקראת **לפני** שיש סשן, ומסך
+       הכניסה הוא בדיוק המקום שבו אדם תקוע צריך לדעת למי
+       לפנות. בלי זה הבלוק קיים במפה ואי אפשר להציג אותו
+       באף מסך — כלומר תכונה שנכתבה ואינה מגיעה.
+
+       ⚠ **ורק הבלוק הזה, במפורש.** `texts` כולו כאן היה
+         מוציא לכל מי שמגיע לכתובת את הנהלים הפנימיים של
+         המכינה, לפני שהוא הזדהה. */
+    signinNote: contentText(profile, "signin.note"),
   };
 }
 

@@ -131,6 +131,19 @@ if not exist node_modules (
   echo   [2/4] Packages are installed.
 )
 
+rem ---------- 2b. Roles of existing mechinot ----------
+rem  ~~ WHY THIS ONLY REPORTS ~~
+rem  A mechina that edited its roles once freezes that list: the
+rem  profile is a delta over the preset, and resolveProfile
+rem  REPLACES a whole array instead of merging it. So a screen
+rem  added to the catalogue tomorrow never reaches it - no error,
+rem  no sign, it simply does not know the screen exists.
+rem
+rem  Granting a screen widens a permission, and a startup script
+rem  that widens permissions on its own every time you run it is
+rem  exactly what must not exist. So this prints, and you decide.
+call npm.cmd run sync:roles
+
 rem ---------- 3. Vite cache ----------
 rem  ~~ NEW SOURCE FILE, CACHE HOLDING THE OLD BUNDLE ~~
 rem  node_modules\.vite keeps a bundle built before the file

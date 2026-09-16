@@ -18,7 +18,8 @@
     "check:tenancy": "node tools/check-tenancy.mjs",
     "new": "node tools/new-mechina.mjs",
     "root": "node tools/root.mjs",
-    "verify": "sh tools/verify.sh"
+    "verify": "sh tools/verify.sh",
+    "sync:roles": "node tools/sync-roles.mjs"
   },
   "dependencies": {
     "react": "18.3.1",

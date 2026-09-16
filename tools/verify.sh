@@ -21,4 +21,6 @@ npm run check > /tmp/mx-check.log 2>&1 || {
   tail -3 /tmp/mx-check.log
   exit 1
 }
-tail -2 /tmp/mx-check.log
+# ⚠ שתי חבילות ושתי שורות סיכום — `tail -2` הציג את האחרונה
+# בלבד, ו«27 עברו» נראה כמו כל מה שרץ.
+grep -E "עברו, .* נכשלו" /tmp/mx-check.log

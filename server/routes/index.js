@@ -28,6 +28,8 @@ import * as roles from "./roles.js";
 import * as content from "./content.js";
 import * as dayTypes from "./day-types.js";
 import * as nav from "./nav.js";
+import * as faults from "./faults.js";
+import * as board from "./board.js";
 
 export const ROUTES = {
   /* ⚠ אלה **אינם** עטופים, ובכוונה: אי אפשר להתחבר כשמחייבים
@@ -73,6 +75,10 @@ export const ROUTES = {
   /* ⚠ שיוך תפקיד לאדם — אותו שער, כי מי שיכול להעניק תפקיד
      ניהולי יכול לפתוח לעצמו הכול דרך אדם אחר. */
   "roles/assign": { POST: guard(roles.assign, { screen: "settings" }) },
+  /* ⚠⚠ **שער נפרד למסך «בעלי תפקידים».** הרחבת השער
+     של `roles/list` כדי לשרת את שניהם היתה פותחת לכל איש
+     צוות את עורך ההרשאות של המכינה. */
+  "roles/holders": { GET: guard(roles.holders, { screen: "roles" }) },
 
   /* ---------- טקסטים ----------
      ⚠⚠ **`guard` בלי אפשרויות פותח לכל מחובר, כולל חניכים** —
@@ -84,9 +90,36 @@ export const ROUTES = {
   "content/one": { GET: guard(content.one) },
   "content/save": { PUT: guard(content.save) },
 
-  /* ---------- אנשים ---------- */
+  /* ---------- אנשים ----------
+     ⚠ `people/me` ו-`people/update-me` **בלי `screen`**: הם על
+     המשתמש עצמו, ואדם שאין לו את מסך «אנשים» עדיין רואה
+     ומתקן את הפרטים של עצמו. */
   "people/list": { GET: guard(people.list, { screen: "people" }) },
   "people/me": { GET: guard(people.myProfile) },
+  "people/update-me": { PUT: guard(people.updateMe) },
+
+  /* ---------- תקלות ----------
+     ⚠⚠ **הקריאה פתוחה לכל מחובר, כולל חניכים** — וזו כל
+     התכלית: מי שרואה שכבר דיווחו על המזגן אינו מדווח שוב.
+     ⚠ וההבחנה בין מדווח למטפל היא **בתוך** ההנדלר: דגלי
+     `guard` הם AND, והשאלה כאן היא «המדווח **או** אב הבית». */
+  "faults/list": { GET: guard(faults.list, { screen: "faults" }) },
+  "faults/create": { POST: guard(faults.create, { screen: "faults" }) },
+  "faults/update": { PUT: guard(faults.update, { screen: "faults" }) },
+  "faults/delete": { POST: guard(faults.remove, { screen: "faults" }) },
+
+  /* ---------- לוח מודעות ----------
+     ⚠⚠ **הקהל נאכף בהנדלר ולא בשער.** `guard` יודע לומר
+     «מי נכנס למסך», ולא «אילו שורות בגוף התשובה» — ומודעה
+     לצוות אינה בגוף התשובה של חניך כלל. */
+  "board/list": { GET: guard(board.list, { screen: "board" }) },
+  "board/create": { POST: guard(board.create, { screen: "board" }) },
+  "board/update": { PUT: guard(board.update, { screen: "board" }) },
+  "board/delete": { POST: guard(board.remove, { screen: "board" }) },
+
+  "board/quotes": { GET: guard(board.quotes, { screen: "quotes" }) },
+  "board/quote-add": { POST: guard(board.quoteAdd, { screen: "quotes" }) },
+  "board/quote-delete": { POST: guard(board.quoteRemove, { screen: "quotes" }) },
 
   /* ---------- סוגי ימים ----------
      ⚠⚠ **הקריאה פתוחה לכל מחובר** — התווית של סוג היום מופיעה
@@ -103,6 +136,9 @@ export const ROUTES = {
   "attendance/day": { GET: guard(attendance.day, { screen: "attendance" }) },
   "attendance/mark": { POST: guard(attendance.mark, { screen: "attendance" }) },
   "attendance/summary": { GET: guard(attendance.mySummary) },
+  /* ⚠⚠ **לא `staffOnly`** — השער הוא המסך, וההבחנה בתוך
+     ההנדלר: חניך רואה את עצמו וצוות בוחר אדם. */
+  "attendance/year": { GET: guard(attendance.year, { screen: "attendance-year" }) },
 
   /* ---------- בקשות יציאה ----------
      ⚠ אותו `screen` לשני הקהלים, וההבחנה **בתוך** ההנדלר:

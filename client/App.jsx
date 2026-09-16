@@ -27,6 +27,11 @@ import { Attendance } from "./Attendance.jsx";
 import { Requests } from "./Requests.jsx";
 import { Studio } from "./Studio.jsx";
 import { Rules, Texts } from "./Texts.jsx";
+import { Me } from "./Me.jsx";
+import { Roles } from "./Roles.jsx";
+import { Year } from "./Year.jsx";
+import { Faults } from "./Faults.jsx";
+import { Board, Quotes } from "./Board.jsx";
 import { Placeholder } from "./Placeholder.jsx";
 
 /* ⚠⚠ **הפונט נטען פעם אחת, בקוד ולא ב-index.html.** אותו
@@ -366,7 +371,17 @@ function Screen({ k, user, brand, nav, go, reboot }) {
     case "people": return <People />;
     case "attendance": return <Attendance />;
     case "requests": return <Requests />;
+    case "me": return <Me />;
+    case "roles": return <Roles />;
+    case "attendance-year": return <Year />;
     case "settings": return <Studio onDone={reboot} embedded />;
+    /* ⚠ שני מסכי התקלות הם **אותו רכיב**, והשרת מכריע
+       מה נפתח בו. שני רכיבים לאותו דבר הם בדיוק הבאג שבו
+       אב הבית נחת על מסך הקריאה ולא היה לו כפתור עריכה. */
+    case "faults":
+    case "faults-admin": return <Faults />;
+    case "board": return <Board />;
+    case "quotes": return <Quotes />;
     /* ⚠ שני מסכים שמוזנים מ-`core/content.js` — הנהלים לכולם,
        והמפה למי שעורך. ראו client/Texts.jsx. */
     case "rules": return <Rules />;

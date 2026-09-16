@@ -20,15 +20,11 @@
 import { DataError } from "../data/store.js";
 import { counted } from "./people.js";
 import { dayType, dayLabel, countsForAttendance } from "../../core/day-types.js";
+/* ⚠ העבר ל-`core/dates.js`: שני מסלולים ייבאו אותו מכאן. */
+import { todayISO, DATE_RE } from "../../core/dates.js";
+import { vacationUsed, vacationLeft } from "../../core/quota.js";
+import { activeModules } from "../../core/catalog.js";
 
-/** ⚠ שעון ישראל ולא שעון השרת. שרת ב-UTC הופך ערב ליום הבא. */
-export function todayISO(tz = "Asia/Jerusalem") {
-  return new Intl.DateTimeFormat("en-CA", {
-    timeZone: tz, year: "numeric", month: "2-digit", day: "2-digit",
-  }).format(new Date());
-}
-
-const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 
 export async function day({ db, query, profile, user }) {
   const date = query.date && DATE_RE.test(query.date)
@@ -221,5 +217,118 @@ export async function mySummary({ db, profile, user }) {
      מעולם, וזו טענה שגויה על נתון שאינו קיים. */
   if (!user.personId) return { summary: null, quota: null, notAPerson: true };
   const s = await summarize(db, profile, user.personId);
-  return { summary: s, quota: profile.year?.vacationQuota ?? null };
+  const quota = profile.year?.vacationQuota ?? null;
+
+  /* ⚠⚠ **המכסה נספרת באותה פונקציה שמסך הבקשות סופר בה**
+     (`core/quota.js`). שתי ספירות מקבילות היו מתפצלות בתיקון
+     הראשון, ואז הפרופיל מבטיח מספר אחד ומסך הבקשות אחר.
+
+     ⚠ **ומכינה בלי מודול בקשות מקבלת `null`** ולא אפס —
+     «נותרו 3 ימים» במכינה שאין בה בקשות הוא מספר שאי אפשר
+     לעשות איתו דבר. */
+  const hasRequests = activeModules(profile.modules).includes("requests");
+  const used = hasRequests
+    ? vacationUsed(await db.list("leaveRequest", { where: { person: user.personId } }))
+    : null;
+
+  return {
+    summary: s,
+    quota,
+    used,
+    left: used === null ? null : vacationLeft(quota, used),
+  };
+}
+
+/* ============================================================
+   לוח הנוכחות השנתי — רשת חודשים
+   ------------------------------------------------------------
+   ⚠⚠⚠ **מצב חמישי: `missing`.** הלוח מכיל רק תאריכים שיש להם
+     שורה. רשת שמדביקה ימים זה לזה מסתירה את החור לגמרי; רשת
+     של חודש חושפת כל תאריך חסר — ובלי מצב חזותי משלו הוא
+     נראה כמו «יום ללא פעילות», שזו טענה שגויה על הנתונים.
+
+   ⚠⚠ **הימים שאינם נספרים מסומנים ואינם מוסרים.** יום שהוצא
+     מהמכנה ונעלם מהרשת נראה כמו יום שלא היה, ואז אי אפשר
+     להסביר למה החודש מונה 27 ולא 30.
+
+   ⚠ **וסוג שאינו מוכר מדווח בשמו** — שורה שנושאת סוג שנמחק
+     יוצאת מהמכנה בשקט, וזה הדבר היחיד במסך שאי אפשר לגלות
+     בשום דרך אחרת.
+   ============================================================ */
+export async function year({ db, profile, user, query }) {
+  const cal = await db.list("calendarDay");
+  const days = await db.list("attendanceDay");
+  const marks = await db.list("attendanceMark");
+
+  /* ⚠ חניך רואה את **עצמו בלבד**; צוות בוחר אדם, וברירת
+     המחדל היא תמונת המכינה. שני מיפויים ולא סינון אחד. */
+  const personId = user.isStaff
+    ? (query.person || null)
+    : user.personId;
+
+  const byDay = new Map(days.map((d) => [d.id, d]));
+  const perDate = new Map();
+  for (const m of marks) {
+    const d = byDay.get(m.day);
+    if (!d) continue;
+    if (!perDate.has(d.date)) perDate.set(d.date, []);
+    perDate.get(d.date).push(m);
+  }
+
+  const marked = new Set(days.map((d) => d.date));
+  const kindOf = new Map(cal.map((c) => [c.date, c.kind]));
+
+  /* כל התאריכים שיש עליהם משהו לומר */
+  const dates = [...new Set([...kindOf.keys(), ...marked])].sort();
+
+  const out = dates.map((date) => {
+    const kind = kindOf.get(date) || null;
+    const t = kind ? dayType(profile, kind) : null;
+    const row = {
+      date,
+      kind,
+      kindLabel: kind ? dayLabel(profile, kind) : null,
+      /* ⚠ סוג שנמחק מהאפיון — מדווח, ולא נופל בשקט ל«רגיל». */
+      unknownKind: Boolean(kind && !t),
+      school: t ? Boolean(t.school) : null,
+      counts: t ? Boolean(t.counts) : null,
+      /* ⚠⚠ המצב החמישי: יש לו סוג, ואיש לא סימן בו. */
+      missing: Boolean(kind && t?.school && !marked.has(date)),
+      marked: marked.has(date),
+    };
+
+    const list = perDate.get(date) || [];
+    if (personId) {
+      const mine = list.find((m) => m.person === personId);
+      row.status = mine?.status || (marked.has(date) ? "unmarked" : null);
+    } else {
+      /* תמונת המכינה: כמה נכחו מתוך כמה סומנו */
+      row.present = list.filter((m) => m.status === "present").length
+        + list.filter((m) => m.status === "half").length * 0.5;
+      row.total = list.length;
+    }
+    return row;
+  });
+
+  let person = null;
+  if (personId) {
+    const p = await db.get("person", personId);
+    /* ⚠ שם בלבד — המסך הזה אינו צריך דבר אחר, ומיפוי מפורש
+       מונע מת.ז ומטלפון לצאת דרך מסך נוכחות. */
+    person = p ? { id: p.id, name: p.name } : null;
+  }
+
+  return {
+    days: out,
+    person,
+    /* ⚠ הבורר קיים לצוות בלבד, והוא מגיע מהשרת — מסך שיציע
+       לחניך לבחור אדם אחר יקבל את שלו בחזרה ויראה כמו באג. */
+    people: user.isStaff
+      ? (await counted(db, "student")).map((p) => ({ id: p.id, name: p.name }))
+      : [],
+    summary: personId ? await summarize(db, profile, personId) : null,
+    /* ⚠ מספר החורים הוא הדבר שהמסך קיים בשבילו. */
+    missingCount: out.filter((r) => r.missing).length,
+    unknownKinds: [...new Set(out.filter((r) => r.unknownKind).map((r) => r.kind))],
+  };
 }

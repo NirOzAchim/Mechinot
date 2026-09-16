@@ -612,12 +612,20 @@ function Modules({ st, save }) {
   const cat = st.catalog;
 
   const blocked = (k) => (cat[k].needs || []).filter((n) => !mods[n] && !cat[n].core);
-  const toggle = (k) => { if (!cat[k].core) setMods({ ...mods, [k]: !mods[k] }); };
+  /* ⚠⚠ **מודול שטרם נבנה אינו נדלק ואינו מוסתר.** מנהל
+     שרואה «מלאי וציוד — בבנייה» יודע מה יהיה; מנהל שאינו
+     רואה אותו מסיק שהמוצר אינו עושה זאת. */
+  const toggle = (k) => {
+    if (cat[k].core || !cat[k].built) return;
+    setMods({ ...mods, [k]: !mods[k] });
+  };
   const on = Object.keys(cat).filter((k) => cat[k].core || mods[k]);
 
   return (
     <>
-      <Sec right={<span className="pill tone">{on.length} / {Object.keys(cat).length}</span>}>
+      <Sec right={<span className="pill tone">
+        {on.length} / {Object.keys(cat).filter((k) => cat[k].built).length}
+      </span>}>
         מה יהיה באפליקציה שלכם
       </Sec>
       <p className="muted">
@@ -638,17 +646,24 @@ function Modules({ st, save }) {
                   <div className="nm">{m.title}</div>
                   <div className="row" style={{ gap: 5, marginTop: 3 }}>
                     {m.core && <span className="pill">תמיד דלוק</span>}
+                    {!m.built && <span className="pill out">בבנייה</span>}
                     {m.private && <span className="pill info">פרטי לחניך</span>}
                   </div>
                 </span>
                 <span className="sw">
                   <input type="checkbox" aria-label={m.title}
-                    checked={isOn} disabled={m.core || need.length > 0}
+                    checked={isOn} disabled={m.core || !m.built || need.length > 0}
                     onChange={() => toggle(k)} />
                   <i />
                 </span>
               </div>
               <p className="tiny" style={{ marginTop: 8 }}>{m.why}</p>
+              {!m.built && (
+                <p className="tiny" style={{ marginTop: 6 }}>
+                  המסכים שלו עוד נכתבים. הוא ייפתח להדלקה כשיהיה מוכן,
+                  והדלקה עכשיו היתה נותנת לשוניות שאין מאחוריהן כלום.
+                </p>
+              )}
               {need.length > 0 && (
                 <p className="tiny" style={{ marginTop: 6, color: "var(--warn)" }}>
                   דורש: {need.map((n) => cat[n].title).join(" · ")}

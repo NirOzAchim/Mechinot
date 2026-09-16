@@ -157,6 +157,8 @@ export const api = {
      ⚠ **המצב הרצוי ולא «הוסף/הסר»** ב-`assignRoles`: שניים
      שעורכים את אותו אדם מקבלים תוצאה שלמה ולא חצי מכל אחד. */
   roles: () => call("roles/list"),
+  /* ⚠ נקודת קצה נפרדת מ-`roles` — ראו server/routes/roles.js. */
+  roleHolders: () => call("roles/holders"),
   roleSave: (role) => call("roles/save", { method: "PUT", body: role }),
   roleDelete: (slug, force) => call("roles/delete", { method: "POST", body: { slug, force } }),
   assignRoles: (person, roles) => call("roles/assign", { method: "POST", body: { person, roles } }),
@@ -164,8 +166,31 @@ export const api = {
   /* ---- אנשים ---- */
   people: (kind = "student") => call(`people/list?kind=${encodeURIComponent(kind)}`),
   myProfile: () => call("people/me"),
+  /* ⚠ שולחת **רק** את השדות שהאדם רשאי לשנות על עצמו. שם
+     ות.ז אינם ברשימה בשרת, ושליחה שלהם לא תיכתב — ראו
+     server/routes/people.js. */
+  updateMe: (fields) => call("people/update-me", { method: "PUT", body: fields }),
+
+  /* ---- תקלות ---- */
+  faults: () => call("faults/list"),
+  faultCreate: (f) => call("faults/create", { method: "POST", body: f }),
+  faultUpdate: (f) => call("faults/update", { method: "PUT", body: f }),
+  faultDelete: (id) => call("faults/delete", { method: "POST", body: { id } }),
+
+  /* ---- לוח מודעות ---- */
+  board: (archive = false) => call(`board/list${archive ? "?archive=1" : ""}`),
+  noticeCreate: (n) => call("board/create", { method: "POST", body: n }),
+  noticeUpdate: (n) => call("board/update", { method: "PUT", body: n }),
+  noticeDelete: (id) => call("board/delete", { method: "POST", body: { id } }),
+
+  quotes: () => call("board/quotes"),
+  quoteAdd: (text, author) =>
+    call("board/quote-add", { method: "POST", body: { text, author } }),
+  quoteDelete: (id) => call("board/quote-delete", { method: "POST", body: { id } }),
 
   summary: () => call("attendance/summary"),
+  /* ⚠ הרשת השנתית. בלי `person` — תמונת המכינה. */
+  year: (person) => call(`attendance/year${person ? `?person=${encodeURIComponent(person)}` : ""}`),
 
   /* ---- סוגי ימים ----
      ⚠ נתון של המכינה ולא רשימה בקוד — ראו core/day-types.js. */

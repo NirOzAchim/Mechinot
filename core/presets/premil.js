@@ -10,7 +10,7 @@
      להיות תבנית.
    ============================================================ */
 
-import { ROLE_CATALOG, MODULE_CATALOG, allModules } from "../catalog.js";
+import { ROLE_CATALOG, MODULE_CATALOG, allModules, isBuilt } from "../catalog.js";
 import { DEFAULT_DAY_TYPES } from "../day-types.js";
 
 export const preset = "premil";
@@ -56,13 +56,17 @@ export const PREMIL = {
     "absence.sick": { one: "מחלה", many: "ימי מחלה" },
     "absence.justified": { one: "היעדרות מוצדקת", many: "היעדרויות מוצדקות" },
 
-    "day.regular": { one: "יום רגיל", many: "ימים רגילים" },
-    "day.series": { one: "סדרה", many: "סדרות" },
-    "day.trip": { one: "טיול", many: "טיולים" },
-    "day.home": { one: "סופ״ש בית", many: "סופי שבוע בבית" },
-    "day.holiday": { one: "חופשה", many: "חופשות" },
-    "day.closed": { one: "יום סגור", many: "ימים סגורים" },
-    "day.noroutine": { one: "לא התקיימה שגרה", many: "ימים ללא שגרה" },
+    /* ⚠⚠ מצבי התקלה — שלושה והם בקוד (מכונת מצבים),
+       והשמות כאן — מכינה שאומרת «דווח» משנה תווית
+       והמפתח נשאר `open` לנצח. ראו core/faults.js. */
+    "fault.open": { one: "פתוחה", many: "פתוחות" },
+    "fault.working": { one: "בטיפול", many: "בטיפול" },
+    "fault.done": { one: "טופלה", many: "טופלו" },
+
+    "notice.lost": { one: "אבידה ומציאה", many: "אבידות ומציאות" },
+    "notice.tip": { one: "המלצה", many: "המלצות" },
+    "notice.notice": { one: "הודעה", many: "הודעות" },
+    "notice.event": { one: "אירוע", many: "אירועים" },
 
     "unit.week": { one: "שבוע", many: "שבועות" },
     "unit.day": { one: "יום", many: "ימים" },
@@ -89,15 +93,18 @@ export const PREMIL = {
   })),
 
   /* ---------- מודולים ----------
-     ⚠ **מכינה קדם-צבאית מקבלת כמעט הכול דלוק.** זה המוצר:
-       מי שקנה רוצה לראות מה יש, ולא מסך ריק שצריך להדליק בו
-       דברים אחד-אחד. מה שכבוי כאן כבוי כי הוא **אינו** נפוץ,
-       ולא כי הוא פחות חשוב. */
-  modules: Object.fromEntries(allModules().map((m) => [
-    m,
-    /* פרויקטים אישיים ומליאות אינם קיימים בכל מכינה */
-    !["projects", "content"].includes(m),
-  ])),
+     ⚠⚠⚠ **דלוק = נבנה.** הפיתוי היה להדליק הכול, כדי
+       שמי שקנה יראה כמה יש במוצר — והתוצאה היא עשרים
+       לשוניות שנפתחות ל«בבנייה». **מסך שאינו עובד גרוע
+       ממסך שאינו קיים**: הראשון מלמד שהמוצר הוא הדגמה,
+       והשני יושב בקטלוג עם ההבטחה שלו ואומר «בבנייה».
+
+     ⚠ **והרוחב נמדד במה שאפשר לשנות, לא במספר הלשוניות.**
+       מכינה שעורכת את סוגי הימים, את התפקידים, את כל נוסח
+       ואת אוצר המילים — יש לה בסיס רחב גם בשישה מודולים.
+
+     ראו docs/BASE.md. */
+  modules: Object.fromEntries(allModules().map((m) => [m, isBuilt(m)])),
 
   /* ---------- השנה ---------- */
   year: {

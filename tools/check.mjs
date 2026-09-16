@@ -22,6 +22,11 @@ import { ROUTES, ADMIN_ROUTES } from "../server/routes/index.js";
 import { SLUG_RE, slugProblem, suggestSlug } from "../server/tenants.js";
 import { MODULE_CATALOG, ROLE_CATALOG, activeModules, activeScreens, roleScreens } from "../core/catalog.js";
 import { PARSERS } from "../core/import.js";
+import { STATUSES, statusOf, isClosed, statusLabel } from "../core/faults.js";
+import { KINDS, AUDIENCES, kindOf, mayPost, mayTarget, visibleTo, quoteOfDay } from "../core/board.js";
+import { vacationUsed, vacationLeft } from "../core/quota.js";
+import { todayISO, asDate, dateOr } from "../core/dates.js";
+import { isBuilt, builtModules } from "../core/catalog.js";
 
 const ROOT = resolve(fileURLToPath(import.meta.url), "../..");
 let pass = 0, fail = 0;
@@ -613,6 +618,158 @@ for (const [k, p2] of Object.entries(PARSERS)) {
   ok(r.bad.length === 1, "תאריך שאינו קיים לא נדחה");
   ok(r.rows.length === 3, `טווח לא נפרש לשלושה ימים — ${r.rows.length}`);
   ok(r.rows.every((x) => x.kind === "series"), "סוג היום לא הוחל על כל הטווח");
+}
+
+
+/* ============================================================
+   הבסיס — דלוק שווה נבנה
+   ⚠⚠⚠ **מסך שאינו עובד גרוע ממסך שאינו קיים.** מודול
+     שנדלק בפריסט וטרם נבנה נותן לשוניות שנפתחות לכלום,
+     וזה הרושם הראשון של מי שקנה. ראו docs/BASE.md.
+   ============================================================ */
+/* ============================================================
+   ⚠⚠⚠ `.kx` — שורש שאינו קיים כאן
+   ------------------------------------------------------------
+   במערכת הקודמת שורש האפליקציה היה `.kx`, וכל כלל
+   שהיה צריך לגבור על איפוס נשא את הקידומת הזו. כאן
+   השורש הוא `.app`.
+
+   ⚠⚠ **וזה נכשל בשקט מוחלט:** `.kx .yr-c{...}` הוא CSS
+     תקין לחלוטין שפשוט אינו תואם לשום אלמנט. הבנייה
+     עוברת, הדפדפן אינו מתלונן, והמסך פשוט מצטייר בלי
+     צבע. זה קרה בפועל ברשת הנוכחות, ונתפס בצילום מסך
+     בלבד.
+   ============================================================ */
+section("שורש ה-CSS");
+{
+  for (const f of ["client/styles.js", "client/console-styles.js", "client/site-styles.js"]) {
+    const src = readFileSync(join(ROOT, f), "utf8");
+    ok(!/\.kx[\s.{:,]/.test(src),
+      `${f} מכיל סלקטור .kx — שורש שאינו קיים במוצר הזה (השורש הוא .app)`);
+  }
+}
+
+section("הבסיס");
+{
+  for (const [m, on] of Object.entries(PREMIL.modules)) {
+    ok(on === isBuilt(m),
+      `הפריסט והבנייה אינם מסכימים על «${m}» — דלוק ${on}, נבנה ${isBuilt(m)}`);
+  }
+  /* ⚠ מודול ליבה שאינו בנוי הוא מוצר שאי אפשר למכור. */
+  for (const [m, def] of Object.entries(MODULE_CATALOG)) {
+    if (def.core) ok(def.built, `מודול ליבה «${m}» מסומן כלא-בנוי`);
+  }
+  /* ⚠⚠ **מודול בנוי שתלוי במודול שאינו בנוי** הוא
+     מודול שאי אפשר להדליק לעולם: האשף חוסם את שניהם. */
+  for (const m of builtModules()) {
+    for (const need of MODULE_CATALOG[m].needs || []) {
+      ok(isBuilt(need),
+        `«${m}» בנוי ותלוי ב-«${need}» שאינו — לעולם לא יידלק`);
+    }
+  }
+  /* ⚠ כל מסך של מודול בנוי חייב להיות מנותב ב-App.jsx. */
+  const app = readFileSync(join(ROOT, "client/App.jsx"), "utf8");
+  for (const m of builtModules()) {
+    for (const sc of MODULE_CATALOG[m].screens || []) {
+      ok(app.includes(`case "${sc.key}"`),
+        `המסך «${sc.key}» (${m}) מסומן כבנוי ואינו מנותב ב-App.jsx`);
+    }
+  }
+}
+
+/* ============================================================
+   מצבי התקלה
+   ============================================================ */
+section("תקלות");
+{
+  /* ⚠⚠ **מצב שאינו מוכר אינו סגור.** ברירת מחדל של
+     «סגור» היתה מעלימה תקלה אמיתית מהמסך בשקט. */
+  ok(isClosed("shalom") === false, "מצב שאינו מוכר נחשב סגור");
+  ok(isClosed("") === false, "מצב ריק נחשב סגור");
+  ok(isClosed("done") === true, "«טופלה» אינו סוגר");
+  ok(statusOf("in_progress") === null, "מצב שאינו מוכר לא הוחזר כ-null");
+  ok(STATUSES.filter((x) => x.closes).length === 1, "יותר ממצב סוגר אחד");
+  /* ⚠ לכל מצב יש תווית בפריסט — אחרת המסך מציג `fault.open`. */
+  for (const st of STATUSES) {
+    ok(PREMIL.vocab[`fault.${st.slug}`], `אין תווית למצב «${st.slug}» בפריסט`);
+    ok(statusLabel(PREMIL, st.slug) !== `fault.${st.slug}`,
+      `התווית של «${st.slug}» חוזרת כמפתח`);
+  }
+}
+
+/* ============================================================
+   לוח המודעות
+   ============================================================ */
+section("לוח מודעות");
+{
+  /* ⚠⚠⚠ **מי מפרסם נקבע לפי מה נאמר.** חניך שאיבד משהו
+     הוא המקרה הנפוץ ביותר, ולוח שרק בעלי תפקידים
+     כותבים בו נועל אותו בדיוק. */
+  ok(mayPost("lost", {}) === true, "חניך אינו יכול לפרסם אבידה");
+  ok(mayPost("tip", {}) === true, "חניך אינו יכול לפרסם המלצה");
+  ok(mayPost("notice", {}) === false, "חניך בלי תפקיד מפרסם הודעה");
+  ok(mayPost("notice", { hasRole: true }) === true, "בעל תפקיד אינו מפרסם הודעה");
+  ok(mayPost("nope", { isStaff: true }) === false, "סוג שאינו מוכר התקבל");
+  ok(kindOf("nope") === null, "סוג שאינו מוכר לא הוחזר כ-null");
+
+  /* ⚠⚠ **הקהל הוא הרשאת קריאה**, וחניך אינו מפרסם לצוות. */
+  ok(mayTarget("staff", { isStaff: false }) === false, "חניך יכול לפרסם לצוות");
+  ok(mayTarget("staff", { isStaff: true }) === true, "איש צוות אינו יכול לפרסם לצוות");
+  ok(mayTarget("world", { isStaff: true }) === false, "קהל שאינו מוכר התקבל");
+  ok(visibleTo({ audience: "staff" }, { isStaff: false }) === false,
+    "מודעת צוות גלויה לחניך");
+  ok(visibleTo({ audience: "students" }, { isStaff: true }) === false,
+    "מודעה לחניכים גלויה לצוות");
+  /* ⚠ מודעה בלי קהל היא לכולם — שורה שנכתבה בלוח ביד
+     לא תיעלם מכל המסכים. */
+  ok(visibleTo({}, { isStaff: false }) === true, "מודעה בלי קהל נעלמה");
+
+  /* ⚠⚠ **הציטוט יציב לפי התאריך ואינו אקראי.** אקראי היה
+     מתחלף בכל טעינה, ואז «הציטוט של היום» אינו דבר אחד. */
+  const qs = [{ id: "a" }, { id: "b" }, { id: "c" }];
+  ok(quoteOfDay(qs, "2026-09-16") === quoteOfDay(qs, "2026-09-16"), "הציטוט היומי אינו יציב");
+  ok(quoteOfDay([], "2026-09-16") === null, "בנק ריק החזיר ציטוט");
+  ok(new Set(["2026-09-16", "2026-09-17", "2026-09-18"]
+    .map((d) => quoteOfDay(qs, d).id)).size > 1, "אותו ציטוט בכל יום");
+}
+
+/* ============================================================
+   מכסת החופש
+   ============================================================ */
+section("מכסה");
+{
+  const rows = [
+    { status: "approved", type: "vacation", chargedDays: 1 },
+    { status: "approved", type: "vacation", chargedDays: 0.5 },
+    /* ⚠ מחלה ובקשה שלא אושרה אינן יורדות מהמכסה. */
+    { status: "approved", type: "sick", chargedDays: 3 },
+    { status: "pending", type: "vacation", chargedDays: 2 },
+    { status: "rejected", type: "vacation", chargedDays: 2 },
+  ];
+  ok(vacationUsed(rows) === 1.5, `המכסה נספרה ${vacationUsed(rows)} במקום 1.5`);
+  ok(vacationUsed([]) === 0, "בלי בקשות המכסה אינה אפס");
+  /* ⚠⚠ **`null` אינו 0.** «נותרו 0» היא טענה שהחניך מיצה
+     את הכול; «לא הוגדרה מכסה» הוא מצב אחר לגמרי. */
+  ok(vacationLeft(null, 2) === null, "מכסה שלא הוגדרה הוחזרה כמספר");
+  ok(vacationLeft(3, 5) === 0, "יתרה שלילית");
+  ok(vacationLeft(3, 1) === 2, "חישוב היתרה שגוי");
+}
+
+/* ============================================================
+   תאריכים
+   ============================================================ */
+section("תאריכים");
+{
+  ok(/^\d{4}-\d{2}-\d{2}$/.test(todayISO()), "todayISO אינו מחזיר ISO");
+  /* ⚠ שעון המכינה ולא שעון השרת — אזור זמן שונה
+     צריך להיות יכול להחזיר יום אחר. */
+  ok(todayISO("Pacific/Kiritimati") >= todayISO("Pacific/Niue"),
+    "אזור הזמן אינו משפיע על התאריך");
+  /* ⚠⚠ **קלט שאינו תאריך מחזיר `null`** ולא נופל בשקט
+     להיום — בדיוק הבאג של ברירת מחדל שקטה. */
+  ok(asDate("מחר") === null, "קלט שאינו תאריך התקבל");
+  ok(asDate("2026-09-16") === "2026-09-16", "תאריך תקין נדחה");
+  ok(dateOr("מחר") === todayISO(), "dateOr אינו נופל להיום");
 }
 
 /* ---------- סיכום ---------- */

@@ -305,3 +305,57 @@ export async function assign({ db, profile, body, user, tenant }) {
     screens: screensOf(profile, { roles: wanted, isStaff: person.kind === "staff" }),
   };
 }
+
+/* ============================================================
+   מי נושא איזה תפקיד
+   ------------------------------------------------------------
+   ⚠⚠ **נקודת קצה נפרדת מ-`roles/list`, ובכוונה.** `roles/list`
+     שמור למסך ההגדרות (`screen: "settings"`) ומחזיר את קטלוג
+     המסכים ואת ההצעות — כלומר את מה שדרוש כדי **לערוך** את
+     ההגדרה של תפקיד. המסך «בעלי תפקידים» שואל שאלה אחרת:
+     מי, בפועל, נושא מה.
+
+     הרחבת השער של `roles/list` כדי לשרת את שניהם הייתה פותחת
+     לכל איש צוות את עורך ההרשאות של המכינה. **שני קהלים, שתי
+     נקודות קצה, שני שערים.**
+
+   ⚠ **ותפקידי הבסיס אינם ברשימה.** הם נישאים על ידי כולם
+     ואינם מוענקים; שורה «כל אדם במכינה — 33 נושאים» היא רעש
+     שמסתיר את מי שבאמת נושא תפקיד.
+
+   ⚠ **`canAssign` נגזר בשרת** — כפתור שמופיע ומקבל 403 אחרי
+     הלחיצה הוא בדיוק מה שהכלל הזה נועד למנוע.
+   ============================================================ */
+export async function holders({ profile, db, user }) {
+  const people = await db.list("person", {
+    where: { active: true, excludeFromCounts: false }, order: "name",
+  });
+  const byId = new Map(people.map((p) => [p.id, p]));
+
+  const mine = new Map();
+  for (const a of await db.list("roleAssignment")) {
+    if (!byId.has(a.person)) continue;
+    if (!mine.has(a.role)) mine.set(a.role, []);
+    mine.get(a.role).push({ id: a.person, name: byId.get(a.person).name });
+  }
+
+  return {
+    canAssign: isHead(user),
+    roles: (profile.roles || [])
+      .filter((r) => !r.base)
+      .map((r) => ({
+        slug: r.slug,
+        label: r.label,
+        desc: r.desc || "",
+        staffOnly: Boolean(r.staffOnly),
+        /* ⚠ מספר המסכים ולא הרשימה — המסך הזה עונה על «מי»,
+           ולא על «מה מותר לו». השני יושב בהגדרות. */
+        screenCount: (r.screens || []).includes("*") ? null : (r.screens || []).length,
+        people: mine.get(r.slug) || [],
+      })),
+    /* ⚠ הבורר מקבל את מי שאפשר לשבץ, לפי סוג — תפקיד
+       `staffOnly` שיוענק לחניך פותח לו מסכים שאינם שלו. */
+    staff: people.filter((p) => p.kind === "staff").map((p) => ({ id: p.id, name: p.name })),
+    students: people.filter((p) => p.kind === "student").map((p) => ({ id: p.id, name: p.name })),
+  };
+}

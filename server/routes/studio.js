@@ -55,6 +55,9 @@ export async function state({ profile, db }) {
        רק שם מודול. זה מה שמנהל מכינה קורא לפני שהוא מחליט. */
     catalog: Object.fromEntries(Object.entries(MODULE_CATALOG).map(([k, m]) => [k, {
       title: m.title, why: m.why, core: Boolean(m.core),
+      /* ⚠ מודול שטרם נבנו מסכיו **מוצג ואינו ניתן להדלקה**
+         — ראו ההערה על `built` ב-core/catalog.js. */
+      built: Boolean(m.built),
       needs: m.needs || [],
       screens: (m.screens || []).map((s) => s.title),
       private: Boolean(m.private),

@@ -16,6 +16,7 @@
    ============================================================ */
 
 import { t } from "../../core/vocab.js";
+import { DataError } from "../data/store.js";
 
 /** כל מי שנספר: פעיל, ולא מסומן כמוחרג */
 export async function counted(db, kind = null) {
@@ -95,4 +96,52 @@ export async function myProfile({ db, user, profile }) {
       label: (profile.roles || []).find((r) => r.slug === slug)?.label || slug,
     })),
   };
+}
+
+/* ============================================================
+   מה שאדם משנה על עצמו
+   ------------------------------------------------------------
+   ⚠⚠⚠ **ת.ז, שם, מגדר וסוג אינם כאן, ובמכוון.** הם מזהים
+     את האדם מול המכינה: שינוי שם מנתק אותו מכל מסך שמזהה
+     בעין, ות.ז היא **סוד הכניסה הראשונה** — שינוי שלה מנתק
+     אותו מיד מכל מכשיר. מי שצריך לתקן אותם פונה לראש
+     המכינה, והמסך אומר למי לפנות ולא רק «אי אפשר».
+
+   ⚠⚠ **מיפוי מפורש ולא פריסה.** שדה שאינו ברשימה הזו אינו
+     נכתב — כדי ששדה חדש בסכימה לא ייפתח לכתיבה מעצמו. זו
+     הדרך שבה `active` או `excludeFromCounts` היו נפתחים
+     לעריכה עצמית בלי שאיש התכוון.
+
+   ⚠ **והתשובה אומרת מה השתנה בפועל.** שדה שנשלח זהה לקיים
+     אינו שינוי, ו«נשמר» על כלום הוא שקר קטן שמלמד לא לסמוך
+     על ההודעה.
+   ============================================================ */
+
+/** ⚠ הרשימה **היא** ההרשאה. ראו ההערה למעלה. */
+const SELF_FIELDS = Object.freeze({
+  phone: "טלפון",
+  email: "אימייל",
+  city: "עיר מגורים",
+  shirtSize: "מידת חולצה",
+  allergy: "אלרגיה או רגישות",
+});
+
+export async function updateMe({ db, user, body }) {
+  if (!user.personId) {
+    throw new DataError("מנהל-על אינו אדם במכינה ואין לו פרופיל לערוך", 400);
+  }
+  const p = await db.get("person", user.personId);
+  if (!p) throw new DataError("השורה שלך אינה קיימת", 404);
+
+  const patch = {};
+  const changed = [];
+  for (const [key, label] of Object.entries(SELF_FIELDS)) {
+    if (body?.[key] === undefined) continue;
+    const v = String(body[key] ?? "").trim() || null;
+    if (v !== (p[key] || null)) { patch[key] = v; changed.push(label); }
+  }
+
+  if (!changed.length) return { ok: true, changed: [], same: true };
+  await db.update("person", p.id, patch);
+  return { ok: true, changed };
 }

@@ -30,7 +30,8 @@
 
 import { DataError } from "../data/store.js";
 import { counted } from "./people.js";
-import { todayISO } from "./attendance.js";
+import { todayISO } from "../../core/dates.js";
+import { vacationUsed, vacationLeft } from "../../core/quota.js";
 
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 const TIME_RE = /^([01]\d|2[0-3]):[0-5]\d$/;
@@ -215,11 +216,8 @@ export async function list({ db, user, profile }) {
     const mine = await db.list("leaveRequest", { where: { person: user.personId } });
     mine.sort((a, b) => String(b.fromDate).localeCompare(String(a.fromDate)));
 
-    /* ⚠ המכסה נספרת מבקשות **מאושרות בלבד** — שם יש פחות
-       מקום לפרשנות מאשר בסימון היומי. */
-    const used = mine
-      .filter((r) => r.status === "approved" && r.type === "vacation")
-      .reduce((n, r) => n + (Number(r.chargedDays) || 0), 0);
+    /* ⚠ פונקציה אחת לכל הקוראים — ראו core/quota.js. */
+    const used = vacationUsed(mine);
 
     return {
       /* ⚠⚠ **ערר קיים רק על בקשה שהוכרעה, ופעם אחת.** ערר
@@ -233,7 +231,7 @@ export async function list({ db, user, profile }) {
       used,
       /* ⚠ `null` כשאין מכסה מוגדרת, ולא 0 — «נותרו 0» הוא
          טענה, ו«לא הוגדרה מכסה» הוא מצב אחר לגמרי. */
-      left: quota == null ? null : Math.max(0, quota - used),
+      left: vacationLeft(quota, used),
       staffView: false,
     };
   }

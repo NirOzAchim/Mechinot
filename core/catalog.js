@@ -26,12 +26,30 @@
    screens    המסכים שהוא מוסיף. `staff` — צוות בלבד.
    why        מה זה **נותן**, במשפט. זה מה שמנהל מכינה קורא
               באשף, ולכן זו אינה כותרת טכנית אלא הבטחה.
+   built      המסכים שלו נכתבו באמת.
+
+   ------------------------------------------------------------
+   ⚠⚠⚠ למה `built` ולא `soon`
+   ------------------------------------------------------------
+   **מסך שאינו עובד גרוע ממסך שאינו קיים.** מכינה
+   שנכנסת ורואה עשרים לשוניות שנפתחות ל«בבנייה» לומדת
+   ביום הראשון שהמוצר הוא הדגמה.
+
+   והקוטביות הזו היא העניין: מודול חדש שישכחו לסמן בו
+   `built` מופיע כ«בבנייה» — מציק, נראה מיד, ואינו מזיק.
+   דגל הפוך (`soon`) שישכחו אותו נותן מודול שניתן להדלקה
+   ומלא מסכים ריקים — וזה הכישלון שאי אפשר לתקן אחרי כן.
+
+   ⚠ **מודול ללא `built` אינו ניתן להדלקה באשף**, ואינו
+     מוסתר ממנו: מנהל שרואה «מלאי וציוד — בבנייה» יודע מה
+     יהיה; מנהל שאינו רואה אותו מסיק שהמוצר אינו עושה זאת.
    ============================================================ */
 
 export const MODULE_CATALOG = {
 
   /* ============ ליבה ============ */
   people: {
+    built: true,
     title: "אנשים ותפקידים",
     core: true,
     why: "מצבת החניכים והצוות, ומי נושא איזה תפקיד.",
@@ -46,6 +64,7 @@ export const MODULE_CATALOG = {
   },
 
   attendance: {
+    built: true,
     title: "נוכחות",
     core: true,
     why: "מי היה ומי לא, ואחוז נוכחות שמחושב מזה.",
@@ -53,12 +72,18 @@ export const MODULE_CATALOG = {
     roles: ["weeklead"],
     screens: [
       { key: "attendance", title: "סימון יומי" },
-      { key: "attendance-year", title: "לוח נוכחות שנתי", staff: true },
+      /* ⚠⚠ **אינו `staff`, ובמכוון.** חניך רואה בו את
+         **עצמו בלבד** — השרת מחזיר לו רשימת אנשים ריקה
+         ומתעלם מ-`?person=` של מישהו אחר. «מה האחוז שלי
+         ואיפה נעדרתי» היא השאלה שהוא שואל הכי הרבה,
+         ומסך שרק הצוות רואה מחזיר אותה לשאול בעל פה. */
+      { key: "attendance-year", title: "לוח נוכחות שנתי" },
     ],
   },
 
   /* ============ ניתנים לכיבוי ============ */
   requests: {
+    built: true,
     title: "בקשות יציאה",
     why: "חניך מבקש לצאת, המדריך ממליץ, וראש המכינה מכריע — והמכסה נגזרת מזה.",
     needs: ["attendance"],
@@ -152,6 +177,7 @@ export const MODULE_CATALOG = {
   },
 
   faults: {
+    built: true,
     title: "תקלות ובעיות",
     why: "כל חניך מדווח, ואב הבית רואה רשימה אחת במקום עשרים הודעות.",
     entities: ["fault"],
@@ -194,6 +220,7 @@ export const MODULE_CATALOG = {
   },
 
   board: {
+    built: true,
     title: "לוח מודעות",
     why: "הודעות, אבידות ומציאות, והציטוט היומי.",
     entities: ["notice", "quote"],
@@ -252,6 +279,7 @@ export const MODULE_CATALOG = {
   },
 
   texts: {
+    built: true,
     title: "נהלים וטקסטים",
     why: "נהלי המכינה ותיאורי התפקידים — נערכים מהמסך, בלי מפתח.",
     entities: ["textBlock"],
@@ -290,7 +318,7 @@ export const ROLE_CATALOG = {
     label: "כל אדם במכינה", base: true,
     why: "מה שכל חניך רואה בלי שהעניקו לו שום תפקיד.",
     screens: [
-      "home", "me", "requests", "agenda", "rate", "myteams",
+      "home", "me", "attendance-year", "requests", "agenda", "rate", "myteams",
       "chores", "faults", "laundry", "board", "quotes",
       "tryouts", "projects", "rules", "leadweek", "plenary", "stu-lessons",
     ],
@@ -300,13 +328,13 @@ export const ROLE_CATALOG = {
     why: "רואה הכול ומכריע בכל דבר." },
   guide: { label: "מדריך", staffOnly: true,
     why: "מלווה קבוצה, ממליץ על בקשות יציאה.",
-    screens: ["home", "me", "people", "attendance", "requests", "lessons", "mygroup", "myteams"] },
+    screens: ["home", "me", "people", "attendance", "attendance-year", "requests", "lessons", "mygroup", "myteams"] },
   staff: { label: "איש צוות", staffOnly: true,
     why: "רואה את המכינה, בלי הכרעות.",
-    screens: ["home", "me", "people", "attendance", "requests", "lessons"] },
+    screens: ["home", "me", "people", "attendance", "attendance-year", "requests", "lessons"] },
   viewer: { label: "צפייה בלבד", staffOnly: true, viewOnly: true,
     why: "רואה הכול ואינו משנה דבר. למנכ״ל או לרואה חשבון.",
-    screens: ["home", "me", "people", "attendance", "lessons", "trends"] },
+    screens: ["home", "me", "people", "attendance", "attendance-year", "lessons", "trends"] },
 
   scheduler: { label: "אחראי לו״ז", module: "lessons",
     why: "מנהל את גיליונות המרצים ומדווח מה התקיים.",
@@ -407,3 +435,8 @@ export function roleScreens(role, modules = {}) {
   const exists = new Set(activeScreens(modules).map((s) => s.key));
   return (role.screens || []).filter((s) => exists.has(s));
 }
+
+/** מודולים שהמסכים שלהם נכתבו באמת. ראו ההערה בראש. */
+export const isBuilt = (m) => Boolean(MODULE_CATALOG[m]?.built);
+
+export const builtModules = () => allModules().filter(isBuilt);

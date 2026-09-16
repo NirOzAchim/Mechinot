@@ -579,6 +579,56 @@ const MOTION = `
 
 const DATA = `
 /* ============================================================
+   רשת החודש — לוח הנוכחות
+   ------------------------------------------------------------
+   ⚠⚠ **direction:rtl במפורש.** בלעדיו הרשת נבנית
+     משמאל לימין בעוד כותרות הימים בעברית, וכל
+     תאריך יושב על היום הלא-נכון.
+
+   ⚠⚠ **הקידומת .app חובה.** התא הוא «button»,
+     וכלל כללי על כפתורים מאפס רקע ומסגרת בסגוליות
+     גבוהה יותר — ואז הרשת מצטיירת לבנה לגמרי.
+   ============================================================ */
+.yr{ display:grid; grid-template-columns:repeat(7,1fr); gap:5px;
+  margin-top:var(--s3); }
+.yr-h{ text-align:center; font-size:12px; font-weight:700;
+  color:var(--faint); padding-bottom:2px; }
+.app .yr-c{ aspect-ratio:1; display:flex; align-items:center;
+  justify-content:center; font-size:13.5px; font-weight:600;
+  border-radius:var(--r-sm); border:1px solid var(--line-soft);
+  background:var(--surface); color:var(--ink); cursor:pointer;
+  transition:transform .12s var(--ease); }
+.app .yr-c:hover:not(:disabled){ transform:scale(1.07); }
+.app .yr-c:disabled{ opacity:.35; cursor:default; border-style:dashed; }
+
+/* ⚠ הצבע הוא רמז ולא המידע — המקרא אומר במילים
+   מה כל אחד אומר, והתא נפתח לפירוט בלחיצה. */
+.app .yr-c.ok{ background:var(--ok-soft); border-color:var(--ok); }
+.app .yr-c.warn{ background:var(--warn-soft); border-color:var(--warn); }
+.app .yr-c.bad{ background:var(--bad-soft); border-color:var(--bad); }
+.app .yr-c.faint{ color:var(--faint); }
+/* ⚠⚠ «אין שורה» — מסומן בקו מקווקו ולא בצבע בלבד:
+   הוא מצב של **חוסר נתון**, ולא מצב של היום. */
+.app .yr-c.dim{ background:repeating-linear-gradient(45deg,
+    var(--sand) 0 5px, transparent 5px 10px);
+  border-style:dashed; border-color:var(--warn); color:var(--faint); }
+.app .yr-c.out{ background:var(--sand); color:var(--faint);
+  border-style:dotted; }
+
+/* ⚠⚠ **«.dot» הייתה מוגדרת רק כ«.tab .dot»**, ולכן מקרא
+   שהשתמש בה עבר את בדיקת המחלקות וצייר כלום. מקרא
+   של צבעים בלי צבעים הוא רשימת מילים שאינה מסבירה דבר. */
+.dot{ width:11px; height:11px; border-radius:var(--r-full); flex:none;
+  background:var(--surface); border:1px solid var(--line); }
+.dot.ok{ background:var(--ok-soft); border-color:var(--ok); }
+.dot.warn{ background:var(--warn-soft); border-color:var(--warn); }
+.dot.bad{ background:var(--bad-soft); border-color:var(--bad); }
+.dot.faint{ background:var(--surface); border-color:var(--line); }
+.dot.dim{ background:repeating-linear-gradient(45deg,
+    var(--sand) 0 3px, transparent 3px 6px); border-color:var(--warn);
+  border-style:dashed; }
+.dot.out{ background:var(--sand); border-style:dotted; }
+/* ============================================================
    טבלה, מתג, דגימת צבע, אזור שחרור
    ------------------------------------------------------------
    ⚠ אלה הרכיבים של מסכי **העריכה** — האפיון והייבוא. הם אינם

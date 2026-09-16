@@ -146,6 +146,13 @@ export const api = {
   importCommit: (kind, text) => call("studio/commit", { method: "POST", body: { kind, text } }),
   invite: (person, username) => call("studio/invite", { method: "POST", body: { person, username } }),
 
+  /* ---- טקסטים ----
+     ⚠ אותה נקודת קצה למסך שהטקסט יושב בו ולמפת הטקסטים —
+     שתי נקודות היו מתפצלות. ראו server/routes/content.js. */
+  content: () => call("content/list"),
+  contentOne: (key) => call(`content/one?key=${encodeURIComponent(key)}`),
+  contentSave: (key, body) => call("content/save", { method: "PUT", body: { key, body } }),
+
   /* ---- תפקידים ----
      ⚠ **המצב הרצוי ולא «הוסף/הסר»** ב-`assignRoles`: שניים
      שעורכים את אותו אדם מקבלים תוצאה שלמה ולא חצי מכל אחד. */

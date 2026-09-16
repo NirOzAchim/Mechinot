@@ -25,6 +25,7 @@ import * as attendance from "./attendance.js";
 import * as requests from "./requests.js";
 import * as studio from "./studio.js";
 import * as roles from "./roles.js";
+import * as content from "./content.js";
 import * as nav from "./nav.js";
 
 export const ROUTES = {
@@ -71,6 +72,16 @@ export const ROUTES = {
   /* ⚠ שיוך תפקיד לאדם — אותו שער, כי מי שיכול להעניק תפקיד
      ניהולי יכול לפתוח לעצמו הכול דרך אדם אחר. */
   "roles/assign": { POST: guard(roles.assign, { screen: "settings" }) },
+
+  /* ---------- טקסטים ----------
+     ⚠⚠ **`guard` בלי אפשרויות פותח לכל מחובר, כולל חניכים** —
+     וזה מה שצריך כאן: נהלים שחניך אינו רואה אינם נהלים.
+     ⚠ **וההכרעה על הכתיבה בתוך ההנדלר ולא בשער.** דגלי
+     `guard` הם AND, והשאלה כאן היא איחוד: ראש המכינה **או**
+     איש צוות **או** בעל התחום — לפי הבלוק, מ-`core/content.js`. */
+  "content/list": { GET: guard(content.list) },
+  "content/one": { GET: guard(content.one) },
+  "content/save": { PUT: guard(content.save) },
 
   /* ---------- אנשים ---------- */
   "people/list": { GET: guard(people.list, { screen: "people" }) },

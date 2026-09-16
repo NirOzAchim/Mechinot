@@ -26,6 +26,7 @@ import { People } from "./People.jsx";
 import { Attendance } from "./Attendance.jsx";
 import { Requests } from "./Requests.jsx";
 import { Studio } from "./Studio.jsx";
+import { Rules, Texts } from "./Texts.jsx";
 import { Placeholder } from "./Placeholder.jsx";
 
 /* ⚠⚠ **הפונט נטען פעם אחת, בקוד ולא ב-index.html.** אותו
@@ -366,6 +367,10 @@ function Screen({ k, user, brand, nav, go, reboot }) {
     case "attendance": return <Attendance />;
     case "requests": return <Requests />;
     case "settings": return <Studio onDone={reboot} embedded />;
+    /* ⚠ שני מסכים שמוזנים מ-`core/content.js` — הנהלים לכולם,
+       והמפה למי שעורך. ראו client/Texts.jsx. */
+    case "rules": return <Rules />;
+    case "texts": return <Texts />;
     default: return <Placeholder k={k} nav={nav} />;
   }
 }

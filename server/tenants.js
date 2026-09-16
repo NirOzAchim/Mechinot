@@ -84,14 +84,134 @@ export function slugProblem(slug) {
 }
 
 /** הצעה ל-slug משם עברי — נקודת פתיחה בלבד, המנהל עורך. */
+/* ============================================================
+   ⚠⚠⚠ תעתיק עברי — בלעדיו אין הצעה לאף מכינה
+   ------------------------------------------------------------
+   הגרסה הראשונה זרקה כל תו שאינו לטיני, ולכן **כל שם עברי
+   החזיר מחרוזת ריקה** — כלומר ההצעה עבדה בדיוק על השמות
+   שאין להם. נתפס בהרשמה: «מכינת שדה בוקר» הציעה כלום, וראש
+   מכינה שרק רצה להירשם נאלץ להמציא כתובת באנגלית ברגע שבו
+   הוא הכי קרוב לוותר.
+
+   ⚠⚠ **עברית אינה מנוקדת, ולכן תעתיק אות-אות אינו יכול
+     להיות טוב.** «שדה» הוא sdh בלי תנועות, ואף אחד לא יקרא
+     את זה. לכן שתי שכבות:
+
+       1. **מילון מילים** — יש כשישים מכינות בארץ, והשמות
+          שלהן חוזרים על אוצר מילים קטן: שדה · בית · עין ·
+          אורות · רוח · יהודה · ישראל · נגב · גליל. מילה
+          שבמילון מקבלת את הכתיב המקובל שלה, לא ניחוש.
+       2. **נפילה אות-אות** לכל השאר, עם שתי היוריסטיקות
+          שעושות את רוב ההבדל: ה׳ בסוף מילה היא a, ובין שני
+          עיצורים נשתלת e.
+
+   ⚠ **וזה תעתיק ולא תרגום.** «שדה בוקר» הוא sde-boker ולא
+     morning-field. מה שצריך מהכתובת הוא שתיקרא ותיזכר.
+
+   ⚠⚠ **וההצעה היא הצעה.** המסך מציג אותה בשדה שאפשר לערוך,
+     ומי שלא אוהב אותה מקליד את שלו. תעתיק שנכפה היה מייצר
+     כתובות שאיש לא בחר — וכתובת היא מה שנשאר על הניירת של
+     המכינה לשנים.
+   ============================================================ */
+const HE_WORDS = {
+  "שדה": "sde", "בוקר": "boker", "בית": "beit", "עין": "ein",
+  "ראש": "rosh", "אורות": "orot", "רוח": "ruach", "נחשון": "nachshon",
+  "יהודה": "yehuda", "ישראל": "israel", "צבאית": "tzvait", "הצבאית": "tzvait",
+  "בני": "bnei", "הר": "har", "גליל": "galil", "נגב": "negev",
+  "ים": "yam", "עוז": "oz", "ניר": "nir", "אמונה": "emuna",
+  "תורה": "tora", "ארץ": "eretz", "מעלה": "maale", "במעלה": "bemaale",
+  "דרך": "derech", "הדרך": "haderech", "לכיש": "lachish", "מיתרים": "meitarim",
+  "קשת": "keshet", "צהלי": "tzahali", "עלי": "eli", "פרת": "prat",
+  "יעקב": "yaakov", "אליהו": "eliyahu", "נריה": "neria", "עצמונה": "atzmona",
+  "כרמים": "kramim", "מצפה": "mitzpe", "רמון": "ramon", "ערד": "arad",
+  "חדרה": "hadera", "יובל": "yuval", "אלון": "alon", "תלם": "telem",
+  "חברותא": "chevruta", "נוה": "neve", "נווה": "neve", "כפר": "kfar",
+  "משואות": "masuot", "יצחק": "yitzchak", "עמיחי": "amichai", "רעות": "reut",
+  "אדרת": "aderet", "צפון": "tzafon", "דרום": "darom", "מערב": "maarav",
+  "מזרח": "mizrach", "חורב": "chorev", "סיני": "sinai", "תבור": "tavor",
+};
+
+const HE_MAP = {
+  "א": "", "ב": "b", "ג": "g", "ד": "d", "ה": "h", "ו": "o", "ז": "z",
+  "ח": "ch", "ט": "t", "י": "i", "כ": "k", "ך": "ch", "ל": "l", "מ": "m",
+  "ם": "m", "נ": "n", "ן": "n", "ס": "s", "ע": "", "פ": "p", "ף": "f",
+  "צ": "tz", "ץ": "tz", "ק": "k", "ר": "r", "ש": "sh", "ת": "t",
+};
+
+const VOWELS = new Set(["a", "e", "i", "o", "u"]);
+
+function translit(word) {
+  const parts = [];
+  for (let i = 0; i < word.length; i++) {
+    const ch = word[i];
+    const last = i === word.length - 1;
+
+    /* ⚠ ה׳ בסוף מילה היא תנועה ולא עיצור: «יהודה» הוא yehuda
+       ולא yehudh, ו«שדה» הוא sde ולא shdh. */
+    if (ch === "ה" && last) { parts.push("a"); continue; }
+    /* ⚠ ו׳ בתחילת מילה נשמעת v ובאמצעה o — בלי ההבחנה «ורד»
+       הופך ל-ored ו«ניר עוז» ל-nir-vz. */
+    if (ch === "ו") { parts.push(i === 0 ? "v" : "o"); continue; }
+    /* ⚠ יו״ד כפולה היא i אחת — «בנייה» ולא bniiah. */
+    if (ch === "י" && word[i + 1] === "י") { parts.push("i"); i++; continue; }
+    /* ⚠ א׳ ו-ע׳ בתחילת מילה **נושאות תנועה** ואינן שקטות:
+       «עליון» הוא elyon ולא lion, ו«אדם» הוא adam ולא dm.
+       באמצע מילה הן כן נבלעות, ושם השתלת e עושה את העבודה. */
+    if (i === 0 && (ch === "א" || ch === "ע")) {
+      if (word[1] !== "ו" && word[1] !== "י") parts.push(ch === "א" ? "a" : "e");
+      continue;
+    }
+    const t = HE_MAP[ch];
+    if (t === undefined) continue;
+    if (t) parts.push(t);
+  }
+
+  /* ⚠⚠ **e בין שני עיצורים.** בלי זה «פרת» הוא prt ו«נחשון»
+     הוא nchshn — מחרוזות שאיש אינו יכול להקריא בטלפון, וזו
+     בדיוק הבדיקה שכתובת צריכה לעבור. */
+  let out = "";
+  for (let i = 0; i < parts.length; i++) {
+    const cur = parts[i], next = parts[i + 1];
+    out += cur;
+    const curIsVowel = VOWELS.has(cur[cur.length - 1]);
+    const nextIsVowel = next && VOWELS.has(next[0]);
+    if (next && !curIsVowel && !nextIsVowel && i < parts.length - 2) out += "e";
+  }
+  return out;
+}
+
 export function suggestSlug(name) {
-  const s = String(name || "")
-    .replace(/^מכינת\s+/, "")
-    .trim().toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "");
+  const raw = String(name || "")
+    /* ⚠ «מכינת» יורדת — כל מכינה נקראת כך, וכתובת שמתחילה
+       ב-mechinat- בכולן אינה מבדילה בין אף שתיים. */
+    /* ⚠ **גם כשהיא כל המחרוזת.** «מכינת» לבדה אינה שם, והצעה
+       ממנה («mkinat») נראית כמו כתובת תקינה — כלומר בדיוק
+       ההצעה שמישהו יאשר בלי להסתכל. אחרי ההסרה לא נשאר דבר,
+       ואז אין הצעה. */
+    .replace(/^\s*(מכינת|מכינה|המכינה)(\s+|$)/, "")
+    .replace(/["'״׳`]/g, "")
+    .trim();
+
+  const s = raw
+    .split(/[\s\u2013\u2014\-־]+/)
+    .filter(Boolean)
+    .map((w) => {
+      if (/^[A-Za-z0-9]+$/.test(w)) return w.toLowerCase();
+      /* ⚠ המילון קודם — הוא הכתיב המקובל, והתעתיק הוא ניחוש. */
+      return HE_WORDS[w] || HE_WORDS[w.replace(/^ה/, "")] || translit(w);
+    })
+    .filter(Boolean)
+    .join("-")
+    .replace(/[^a-z0-9-]+/g, "")
+    .replace(/-{2,}/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 32)
+    /* ⚠ חיתוך ל-32 עלול להשאיר מקף בסוף, ו-SLUG_RE דוחה אותו. */
+    .replace(/-+$/, "");
+
   return SLUG_RE.test(s) ? s : "";
 }
+
 
 /* ============================================================
    המרשם
@@ -184,7 +304,7 @@ export function getMechina(slug) {
   return registry().mechinot.find((m) => m.slug === slug) || null;
 }
 
-export function createMechina({ slug, name, preset = "premil" }) {
+export function createMechina({ slug, name, preset = "premil", source = "console" }) {
   const problem = slugProblem(slug);
   if (problem) throw new TenantError(problem, 400);
   if (!String(name || "").trim()) throw new TenantError("חסר שם למכינה", 400);
@@ -208,6 +328,11 @@ export function createMechina({ slug, name, preset = "premil" }) {
     slug, name: String(name).trim(), preset,
     createdAt: new Date().toISOString(),
     archived: false,
+    /* ⚠ **נקבע ביצירה ואינו ניתן לעריכה.** «מי הגיע לבד
+       מהאתר» הוא נתון תפעולי אמיתי — הוא ההבדל בין לקוח
+       שצריך ליווי לבין אחד שכבר מתנסה — ושדה שאפשר לערוך
+       אותו אחר כך מפסיק לענות על השאלה הזו. */
+    source: source === "signup" ? "signup" : "console",
   };
   reg.mechinot.push(entry);
   writeRegistry(reg);

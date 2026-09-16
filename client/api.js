@@ -232,3 +232,47 @@ export const admin = {
      ראו ההערה ב-server/routes/admin.js. */
   enter: (slug) => callAdmin("enter", { method: "POST", body: { slug } }),
 };
+
+/* ============================================================
+   הדלת הציבורית — דף הנחיתה וההרשמה
+   ------------------------------------------------------------
+   ⚠⚠ **שלישית ונפרדת, מאותו טעם כמו הקונסולה.** היא רצה לפני
+     שיש מכינה בכלל, ולכן אין לה `slug` בכתובת ואין לה מטפל
+     401 — אין סשן שיפוג. מי שיאחד אותה עם `call` יקבל קריאה
+     שנכשלת ב«הכתובת אינה של מכינה» על דף שאינו של מכינה
+     בכוונה.
+   ============================================================ */
+async function callSite(path, { method = "GET", body } = {}) {
+  let res;
+  try {
+    res = await fetch(`/api/public/${path}`, {
+      method,
+      headers: body ? { "Content-Type": "application/json" } : undefined,
+      body: body ? JSON.stringify(body) : undefined,
+      credentials: "same-origin",
+    });
+  } catch {
+    const e = new Error("אין חיבור לשרת");
+    e.offline = true;
+    throw e;
+  }
+
+  let data = null;
+  try { data = await res.json(); } catch { /* גוף ריק */ }
+  if (res.status === 404) throw staleError(data, 404);
+  if (!res.ok) {
+    const e = new Error(data?.error || `שגיאה ${res.status}`);
+    e.status = res.status;
+    throw e;
+  }
+  return data;
+}
+
+export const site = {
+  plans: () => callSite("plans"),
+  /* ⚠ נקרא תוך כדי הקלדה — ראו ההשהיה ב-client/Site.jsx */
+  slug: ({ name = "", slug = "" }) =>
+    callSite(`slug?name=${encodeURIComponent(name)}&slug=${encodeURIComponent(slug)}`),
+  /* ⚠ מקימה מכינה **ומכניסה פנימה** — העוגייה נחתמת בתשובה. */
+  signup: (fields) => callSite("signup", { method: "POST", body: fields }),
+};

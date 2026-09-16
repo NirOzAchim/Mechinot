@@ -284,18 +284,24 @@ section("צבעים מהאפיון");
 section("מחלקות CSS");
 
 {
-  const app = (await import("../client/styles.js")).CSS;
-  const con = (await import("../client/console-styles.js")).CONSOLE_CSS;
   const setOf = (css) => new Set((css.match(/\.[a-z][a-z0-9-]*/g) || []).map((c) => c.slice(1)));
-  const appCls = setOf(app);
-  const conCls = setOf(con);
+  const appCls = setOf((await import("../client/styles.js")).CSS);
+  const conCls = setOf((await import("../client/console-styles.js")).CONSOLE_CSS);
+  const siteCls = setOf((await import("../client/site-styles.js")).SITE_CSS);
 
-  /* מסכים שיושבים על הגיליון של הקונסולה */
-  const CONSOLE_FILES = new Set(["Console.jsx"]);
+  /* ⚠⚠ **שלושה גיליונות, ולכל מסך אחד מהם.** הקונסולה והאתר
+     אינם משתמשים בגיליון של האפליקציה, ובדיקה שתשווה אותם
+     מולו תדווח חמישים שגיאות שאינן שגיאות — וזו בדיקה
+     שמפסיקים להסתכל על הפלט שלה.
+
+     ⚠ **מסך חדש שנוסף לאתר או לקונסולה — שורה כאן.** בלי זה
+       הוא נבדק מול הגיליון הלא-נכון, וכל מחלקה בו נראית
+       חסרה. נתפס כשנוסף Site.jsx. */
+  const SHEET_OF = { "Console.jsx": conCls, "Site.jsx": siteCls };
 
   for (const f of readdirSync(join(ROOT, "client")).filter((x) => /\.jsx$/.test(x))) {
     const src = readFileSync(join(ROOT, "client", f), "utf8");
-    const known = CONSOLE_FILES.has(f) ? conCls : appCls;
+    const known = SHEET_OF[f] || appCls;
     const bad = new Set();
     for (const m of src.matchAll(/className=\{?"([^"]+)"/g)) {
       for (const c of m[1].split(/\s+/).filter(Boolean)) {
@@ -420,8 +426,34 @@ section("הגבול בין מכינות");
   for (const bad of ["api", "console", "admin", "m", "AB", "a", "-x", "x-", "a_b", ""]) {
     ok(Boolean(slugProblem(bad)), `slug פסול התקבל: «${bad}»`);
   }
-  ok(suggestSlug("מכינת מיתרים לכיש") === "",
-    "הצעת slug משם עברי חייבת להחזיר ריק ולא מחרוזת מקרית");
+  /* ============================================================
+     ⚠⚠⚠ **הבדיקה הזו נהפכה, כי היא נעלה התנהגות שגויה.**
+     ------------------------------------------------------------
+     היא דרשה ש**שם עברי יחזיר ריק** — וזו הייתה ההתנהגות של
+     הגרסה הראשונה, שזרקה כל תו שאינו לטיני. כלומר ההצעה
+     עבדה בדיוק על השמות שאין להם: לכל מכינה בארץ יש שם
+     עברי. הבדיקה עברה, והתכונה לא עשתה דבר.
+
+     נתפס בהרשמה הציבורית: «מכינת שדה בוקר» הציעה כלום, וראש
+     מכינה שרק רצה להירשם נאלץ להמציא כתובת באנגלית ברגע שבו
+     הוא הכי קרוב לוותר.
+
+     ⚠ **מה שנבדק עכשיו הוא החוזה ולא התעתיק עצמו.** נעילה של
+       «שדה בוקר → sde-boker» הייתה נשברת בכל שיפור של המילון,
+       והבדיקה הייתה נמחקת במקום להיקרא. מה שחייב להחזיק:
+       שם עברי מחזיר **slug תקין**, וזבל מחזיר **ריק**.
+     ============================================================ */
+  for (const he of ["מכינת מיתרים לכיש", "מכינת שדה בוקר", "מכינת ניר עוז",
+    "מכינת בית ישראל", "המכינה הצבאית בעלי", "מכינת נחשון"]) {
+    const out = suggestSlug(he);
+    ok(out !== "" && !slugProblem(out),
+      `הצעת slug מ«${he}» חייבת להיות תקינה — התקבל «${out}»`);
+  }
+  /* ⚠ וזבל עדיין מחזיר ריק — הצעה מומצאת גרועה מהיעדר הצעה,
+     כי המשתמש יאשר אותה בלי להסתכל. */
+  for (const junk of ["", "   ", "!!!", "א", "־־", "מכינת"]) {
+    ok(suggestSlug(junk) === "", `הצעת slug מ«${junk}» הייתה צריכה להיות ריקה`);
+  }
   ok(suggestSlug("Ein Prat") === "ein-prat", "הצעת slug משם לטיני נשברה");
 }
 

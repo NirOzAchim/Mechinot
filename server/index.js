@@ -37,7 +37,7 @@ import { DataError } from "./data/store.js";
 import { currentUser } from "./auth.js";
 import { currentRoot, rootExists } from "./root.js";
 import { tenant, listMechinot } from "./tenants.js";
-import { ROUTES, ADMIN_ROUTES } from "./routes/index.js";
+import { ROUTES, ADMIN_ROUTES, PUBLIC_ROUTES } from "./routes/index.js";
 
 const ROOT = resolve(fileURLToPath(import.meta.url), "../..");
 const DEV = process.env.NODE_ENV !== "production";
@@ -125,6 +125,36 @@ async function handleAdmin(req, res, url) {
 }
 
 /* ============================================================
+   ה-API הציבורי
+   ------------------------------------------------------------
+   ⚠⚠ **אין כאן `user`, אין `root` ואין `tenant`** — ובכוונה.
+     נקודות הקצה האלה רצות לפני שיש מכינה בכלל, ומה שהן
+     מקבלות בהקשר הוא בדיוק מה שהן צריכות ותו לא. הקשר שנושא
+     יותר ממה שנחוץ הוא הקשר שמישהו ישתמש בו בטעות.
+   ============================================================ */
+async function handlePublic(req, res, url) {
+  /* ⚠ **החיתוך הוא `/api/` ולא `/api/public/`** — המפתחות במפה
+     נושאים את הקידומת («public/slug»), בדיוק כמו במפת
+     הקונסולה. חיתוך ארוך מדי מחזיר «אין נקודת קצה» על נקודה
+     שקיימת, וזו הודעה שנשלחת לחפש באג בקוד שאין בו באג. */
+  const name = url.pathname.slice("/api/".length);
+  const route = PUBLIC_ROUTES[name];
+  if (!route) return send(res, 404, { error: `אין נקודת קצה בשם «${name}»`, unknownEndpoint: true });
+  const handler = route[req.method];
+  if (!handler) return send(res, 405, { error: "שיטה לא נתמכת" });
+
+  try {
+    const out = await handler({
+      req, res,
+      query: Object.fromEntries(url.searchParams),
+      body: await readBody(req),
+    });
+    if (res.writableEnded) return;
+    send(res, 200, out ?? { ok: true });
+  } catch (e) { fail(res, name, e); }
+}
+
+/* ============================================================
    ה-API של מכינה
    ============================================================ */
 async function handleTenantApi(req, res, url, slug, rest) {
@@ -177,6 +207,7 @@ const server = createServer(async (req, res) => {
   const path = url.pathname;
 
   if (path.startsWith("/api/admin/")) return handleAdmin(req, res, url);
+  if (path.startsWith("/api/public/")) return handlePublic(req, res, url);
 
   const m = M_RE.exec(path);
   if (m) {

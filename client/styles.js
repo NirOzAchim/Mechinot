@@ -162,34 +162,80 @@ const SHELL = `
    ============================================================ */
 .app{ min-height:100%; display:flex; flex-direction:column; }
 
+/* ⚠⚠⚠ **«inset-inline-start» ולא «end» — הסרגל בימין.**
+   ההערה מעל אמרה את זה מהיום הראשון, והקוד עשה את
+   ההפך: ב-RTL ה-inline-end הוא הצד השמאלי, ולכן הניווט
+   ישב בשמאל והעין חצתה את כל הרוחב בכל מעבר.
+
+   ⚠ **שלושת המאפיינים חייבים להתהפך יחד** — ההצמדה,
+     המסגרת והריפוד של התוכן. היפוך של אחד מהם בלבד
+     נותן סרגל שיושב מעל התוכן או רצועה ריקה בצד השני.
+
+   ⚠ וזה נמדד בדפדפן («getBoundingClientRect») ולא נוחש —
+     צילום מסך של ממשק RTL קל לקרוא הפוך. */
 .side{
-  position:fixed; inset-block:0; inset-inline-end:0;
+  position:fixed; inset-block:0; inset-inline-start:0;
   width:266px; background:var(--surface);
-  border-inline-start:1px solid var(--line);
+  border-inline-end:1px solid var(--line);
   display:flex; flex-direction:column; z-index:40;
 }
-.side-top{ padding:var(--s5) var(--s4) var(--s4);
-  display:flex; align-items:center; gap:var(--s3); }
+
 .side-nav{ flex:1; padding:0 var(--s3) var(--s4); overflow-y:auto; }
-.side-foot{ padding:var(--s3); border-top:1px solid var(--line-soft); }
+
+
+/* ============================================================
+   סרגל הצד — השדרוג
+   ------------------------------------------------------------
+   ⚠⚠ **המצב הפעיל הוא רצועה ולא רק רקע רך.** רקע
+     בגוון בהיר על משטח לבן נעלם באור שמש ובמסכים
+     חיוורים, ואז אי אפשר לדעת איפה עומדים. קו בקצה
+     נראה תמיד.
+
+   ⚠ **והאייקון באריח משלו.** זה מה שנותן לעין על מה
+     לנוח ברשימה של עשרים שורות — אותו פרט שדף הנחיתה
+     משתמש בו בכל כרטיס.
+   ============================================================ */
+.side-top{ padding:var(--s5) var(--s4) var(--s4);
+  display:flex; align-items:center; gap:var(--s3);
+  border-bottom:1px solid var(--line-soft); }
 
 .navgroup{ margin-bottom:var(--s4); }
+.navgroup:last-child{ margin-bottom:0; }
 .navgroup>h4{ display:flex; align-items:center; gap:6px;
-  padding:0 var(--s3) var(--s2); }
-.navlink{
+  padding:0 var(--s3) 7px; font-size:11px; letter-spacing:.1em;
+  color:var(--faint); font-weight:800; }
+.navgroup>h4 svg{ opacity:.6; }
+
+.app .navlink{
   display:flex; align-items:center; gap:10px; width:100%;
-  padding:8px var(--s3); border-radius:var(--r-sm);
-  color:var(--n-600); font-size:14.5px; font-weight:500; text-align:start;
-  transition:background var(--t-fast) var(--ease), color var(--t-fast) var(--ease);
-}
-.navlink:hover{ background:var(--sand); color:var(--ink); }
-.navlink.on{ background:var(--a-soft); color:var(--accent); font-weight:700; }
-.navlink.on svg{ color:var(--accent); }
-.navlink svg{ color:var(--faint); }
-.navlink .cnt{ margin-inline-start:auto; font-size:11.5px; font-weight:700;
+  padding:7px var(--s3); border-radius:var(--r-sm); margin-bottom:1px;
+  color:var(--n-600); font-size:14.5px; font-weight:600; text-align:start;
+  position:relative;
+  transition:background var(--t-fast) var(--ease),
+             color var(--t-fast) var(--ease); }
+.app .navlink:hover{ background:var(--sand); color:var(--ink); }
+
+/* ⚠ האריח: ריבוע מעוגל שמקבל את הגוון במצב הפעיל. */
+.nl-i{ width:28px; height:28px; border-radius:var(--r-xs); flex:none;
+  display:grid; place-items:center; color:var(--faint);
+  background:transparent;
+  transition:background var(--t-fast) var(--ease),
+             color var(--t-fast) var(--ease); }
+.navlink:hover .nl-i{ color:var(--n-600); }
+
+.app .navlink.on{ background:var(--a-soft); color:var(--accent); font-weight:800; }
+.navlink.on .nl-i{ background:var(--accent); color:var(--a-ink); }
+/* ⚠ **הרצועה הוסרה.** האריח המלא והרקע הרך כבר
+   אומרים «כאן אתם» בביטחון, וקו שלישי על הפינה
+   המעוגלת של הכפתור נקרא כמו שריטה ולא כמו סימן.
+   נתפס בצילום ונמדד בדפדפן. */
+
+.navlink .cnt{ margin-inline-start:auto; font-size:11px; font-weight:800;
   background:var(--bad); color:var(--surface);
-  min-width:19px; height:19px; border-radius:999px;
+  min-width:19px; height:19px; border-radius:var(--r-full);
   display:grid; place-items:center; padding:0 5px; }
+
+.side-foot{ padding:var(--s3); border-top:1px solid var(--line-soft); }
 
 /* ⚠⚠ **מיטשטשת ולא אטומה**, כמו באתר. רצועה אטומה
    על גלילה חותכת את הדף לשניים; טשטוש משאיר את התוכן
@@ -225,7 +271,7 @@ const SHELL = `
 .wrap.narrow{ max-width:760px; }
 
 @media (min-width:1024px){
-  .app.has-side{ padding-inline-end:266px; }
+  .app.has-side{ padding-inline-start:266px; }
   .app.has-side .top-in{ max-width:100%; padding-inline:var(--s6); }
   .app.has-side .main{ padding:var(--s6) var(--s6) var(--s7); }
   .app.has-side .wrap{ max-width:1020px; margin-inline:0; }

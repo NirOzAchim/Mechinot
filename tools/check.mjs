@@ -649,6 +649,50 @@ section("שורש ה-CSS");
   }
 }
 
+/* ============================================================
+   ⚠⚠⚠ שדה שמסלול כותב ואינו בסכימה
+   ------------------------------------------------------------
+   `validateRow` דוחה שדה שאינו מוכר ב-400 — **ודוחה את כל
+   ה-patch איתו**. כלומר שדה אחד שנשכח בסכימה מפיל פעולה
+   שלמה, ולא רק את עצמו.
+
+   זה קרה: `fault.notes` נכתב על ידי המסלול ולא הוגדר
+   בסכימה — ואב בית שסגר תקלה וכתב מה עשה **איבד גם
+   את שינוי הסטטוס**. המסך מציע את השדה, כלומר המשתמש
+   מקליד ומאבד. שום בדיקה לא תפסה את זה.
+
+   ⚠ הבדיקה סורקת `patch.X =` בכל מסלול ומוודאת ש-X הוא
+     שדה של **אחת** הישויות שהקובץ כותב אליהן. זו אינה
+     הוכחה — היא האות הזול והחזק ביותר שיש, והיא תופסת
+     בדיוק את המשפחה הזו.
+   ============================================================ */
+section("שדות שמסלול כותב");
+{
+  const dir = join(ROOT, "server/routes");
+  for (const f of readdirSync(dir).filter((x) => x.endsWith(".js"))) {
+    const src = readFileSync(join(dir, f), "utf8")
+      .replace(/\/\*[\s\S]*?\*\//g, " ");
+
+    /* אלו הישויות שהקובץ הזה כותב אליהן */
+    const targets = new Set();
+    for (const m of src.matchAll(/db\.(?:create|update)\(\s*["']([a-zA-Z]+)["']/g)) {
+      targets.add(m[1]);
+    }
+    if (!targets.size) continue;
+
+    const known = new Set();
+    for (const t of targets) {
+      for (const k of Object.keys(ENTITIES[t]?.fields || {})) known.add(k);
+    }
+
+    for (const m of src.matchAll(/\bpatch\.([a-zA-Z][\w]*)\s*=/g)) {
+      ok(known.has(m[1]),
+        `${f}: כותב patch.${m[1]} — אין שדה כזה ב-${[...targets].join("/")} `
+        + `(validateRow ידחה את כל ה-patch ב-400)`);
+    }
+  }
+}
+
 section("הבסיס");
 {
   for (const [m, on] of Object.entries(PREMIL.modules)) {

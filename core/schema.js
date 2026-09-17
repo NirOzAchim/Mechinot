@@ -400,6 +400,9 @@ export const ENTITIES = {
       detail: f("longtext"),
       urgent: f("bool", { default: false }),
       status: f("text", { default: "open" }),
+      /* ⚠ הערות הטיפול — נכתבות על ידי מי שמטפל, ואינן
+         יוצאות לחניך (`staffView` ב-routes/faults.js). */
+      notes: f("longtext"),
       reportedBy: f("ref", { to: "person" }),
       reportedAt: f("datetime"),
       doneAt: f("date"),

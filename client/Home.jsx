@@ -86,7 +86,7 @@ export function Home({ user, brand, nav, go }) {
       {todo.length > 0 && (
         <div className="stack enter" style={{ marginBottom: "var(--s5)" }}>
           {todo.map((t) => (
-            <button key={t.key} className="card link item link" onClick={() => go(t.key)}
+            <button key={t.key} className="card link item link hov" onClick={() => go(t.key)}
               style={{ padding: "var(--s4)", borderColor: "var(--warn-line)",
                 background: "var(--warn-soft)" }}>
               <div className="tile" style={{ background: "var(--surface)",
@@ -200,7 +200,7 @@ export function Home({ user, brand, nav, go }) {
                       const Icon = screenIcon(i.key);
                       return (
                         <button key={i.key}
-                          className={"card tight link item link " + tone(i.title)}
+                          className={"card tight link item link hov " + tone(i.title)}
                           onClick={() => go(i.key)}>
                           <div className="tile"><Icon size={19} /></div>
                           <div className="grow nm trunc">{i.title}</div>

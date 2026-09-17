@@ -21,7 +21,7 @@ import { applyTheme } from "./styles.js";
 import { Paste } from "./Paste.jsx";
 import { DayTypes } from "./DayTypes.jsx";
 import * as MI from "./icons.jsx";
-import { Sec, Empty, Failed, Loading, Modal, Confirm, useToast, tone } from "./ui.jsx";
+import { Sec, Empty, Failed, Loading, Modal, Confirm, Bar, useToast, tone } from "./ui.jsx";
 
 const STEP_ORDER = ["identity", "vocab", "roles", "modules", "year", "days", "people", "texts"];
 
@@ -58,18 +58,42 @@ export function Studio({ onDone, embedded = false }) {
   const missing = new Set(st.missing);
   const meta = Object.fromEntries(st.steps.map((s) => [s.key, s]));
   const at = STEP_ORDER.indexOf(step);
+  /* ⚠ נגזר מהמטא-דאטה ואינו קבוע: שלב שיוסף כחובה
+     מחר היה משנה את המכנה בלי שאיש יזכור לעדכן מספר. */
+  const required = st.steps.filter((x) => x.required).length;
 
   return (
     <div className="stack">
+      {/* ---------- הפתיח ----------
+          ⚠⚠ **בדיוק הדקדוק של דף הנחיתה**: תגית קטנה,
+            כותרת גדולה, ושורת פתיחה. מי שנרשם דרך האתר
+            מגיע לכאן בשנייה שאחרי, ועיצוב אחר לגמרי נקרא
+            כמו מוצר אחר. */}
       {!embedded && (
         <div className="card lift edge tone-2">
-          <h1>בונים את האפליקציה של המכינה</h1>
-          <p className="muted" style={{ marginTop: 6 }}>
+          <div className="eyebrow">הקמה</div>
+          <h1 className="display">בונים את האפליקציה של המכינה</h1>
+          <p className="lead">
             הכול כבר מלא מראש מתבנית של מכינה קדם-צבאית.
             משנים רק את מה ששלכם. <b>שלושה שלבים חובה</b> — השאר מתי שנוח.
           </p>
+
+          {/* ⚠ **התקדמות כפס ולא כרשימת חסרים.** רשימת
+              «עוד לא הושלמו» אומרת מה חסר ולא כמה נשאר,
+              ומי שרואה שלושה שמות אינו יודע אם הוא בהתחלה
+              או בסוף. */}
+          <div className="row" style={{ marginTop: 20, gap: 14 }}>
+            <Bar className="grow" value={required - missing.size} max={required}
+              tone={missing.size ? "warn" : "ok"} />
+            <span className="tiny nowrap">
+              {missing.size === 0
+                ? "כל שלבי החובה הושלמו"
+                : `${required - missing.size} מתוך ${required} שלבי חובה`}
+            </span>
+          </div>
+
           {missing.size > 0 && (
-            <div className="banner info" style={{ marginBottom: 0 }}>
+            <div className="banner info" style={{ marginBottom: 0, marginTop: 14 }}>
               <MI.Info size={18} />
               <div>עוד לא הושלמו: {[...missing].map((k) => meta[k]?.title || k).join(" · ")}</div>
             </div>
@@ -100,6 +124,16 @@ export function Studio({ onDone, embedded = false }) {
       </div>
 
       <div className="card lift">
+        {/* ⚠⚠ **כותרת לשלב, מהמטא-דאטה ולא מוקלדת בכל שלב.**
+            `desc` כבר ישב ב-`WIZARD_STEPS` ולא הוצג בשום מקום —
+            כלומר הוסבר שנכתב ואיש לא קרא. שדה שנאסף ואינו
+            מוצג הוא טופס שממלאים לחינם. */}
+        <div className="head">
+          <div className="eyebrow">שלב {at + 1} מתוך {STEP_ORDER.length}</div>
+          <h2>{meta[step]?.title || step}</h2>
+          {meta[step]?.desc && <p className="lead">{meta[step].desc}</p>}
+        </div>
+
         {step === "identity" && <Identity st={st} save={save} />}
         {step === "vocab" && <Vocab st={st} save={save} />}
         {step === "roles" && <RolesStep reload={load} />}
@@ -639,7 +673,7 @@ function Modules({ st, save }) {
           const isOn = Boolean(m.core || mods[k]);
           const Icon = MI.moduleIcon(k);
           return (
-            <div key={k} className={"card tight " + (isOn ? "" : "dim ") + tone(m.title)}>
+            <div key={k} className={"card tight hov " + (isOn ? "" : "dim ") + tone(m.title)}>
               <div className="row start">
                 <div className="tile sm"><Icon size={15} /></div>
                 <span className="grow">

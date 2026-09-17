@@ -239,8 +239,21 @@ const RootBanner = ({ user }) => user.isRoot ? (
    הכותרת העליונה
    ============================================================ */
 function Bar({ brand, user, onOut, onMenu, title }) {
+  /* ⚠⚠ **הקו שמתחת לרצועה מופיע רק כשגוללים**, כמו
+     בדף הנחיתה. קו קבוע מצייר גבול גם כשאין מה
+     להפריד.
+     ⚠ `passive` על המאזין: בלעדיו הדפדפן ממתין למאזין
+       לפני כל פריים של גלילה, והגלילה בטלפון נתקעת. */
+  const [scrolled, setScrolled] = useState(false);
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 4);
+    onScroll();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
+
   return (
-    <header className="top">
+    <header className={"top " + (scrolled ? "on" : "")}>
       <div className="top-in">
         {/* ⚠ **מוסתר כשהסרגל נראה.** כפתור תפריט לצד תפריט
             פתוח הוא שני ניווטים לאותו דבר. */}

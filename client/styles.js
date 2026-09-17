@@ -45,8 +45,12 @@ export const FONT_HREF =
 /* ⚠ טוקנים שאינם צבע — מידות, רדיוסים, תזמון. אינם נגזרים
    מהאפיון, ולכן כאן ולא ב-theme.js. */
 const SCALE = `
-  --r-xs: 8px;  --r-sm: 11px; --r-md: 14px;
-  --r-lg: 18px; --r-xl: 24px; --r-full: 999px;
+  /* ⚠⚠ **רדיוסים בקנה המידה של האתר.** הסולם הקודם
+     (8/11/14/18/24) היה הדוק במחצי מזה של דף הנחיתה,
+     והתוצאה היתה שתי שפות עיצוב לאותו מוצר: מי שנרשם
+     באתר ונכנס לאפליקציה ראה מערכת אחרת. */
+  --r-xs: 9px;  --r-sm: 12px; --r-md: 16px;
+  --r-lg: 22px; --r-xl: 30px; --r-full: 999px;
 
   --s1: 4px;  --s2: 8px;  --s3: 12px; --s4: 16px;
   --s5: 22px; --s6: 32px; --s7: 48px; --s8: 72px;
@@ -104,17 +108,34 @@ html{ -webkit-text-size-adjust:100%; }
 body{
   margin:0; background:var(--bg); color:var(--ink);
   font-family:Assistant,"Segoe UI",Arial,system-ui,-apple-system,sans-serif;
-  font-size:15.5px; line-height:1.65;
+  font-size:16px; line-height:1.68;
   font-feature-settings:"kern" 1;
   -webkit-font-smoothing:antialiased; -moz-osx-font-smoothing:grayscale;
 }
-h1,h2,h3,h4{ margin:0; font-weight:700; line-height:1.25; }
-h1{ font-size:27px; letter-spacing:-.024em; font-weight:800; }
-h2{ font-size:20px; letter-spacing:-.018em; }
-h3{ font-size:16.5px; letter-spacing:-.012em; }
+/* ⚠⚠ **כותרות ב-800 וב-tracking שלילי עמוק יותר** — זה הפרט
+   שעושה את רוב ההבדל בין דף הנחיתה לאפליקציה. בגדלים
+   אלה המרווח הטבעי נראה רופף. */
+h1,h2,h3,h4{ margin:0; font-weight:800; line-height:1.2; }
+h1{ font-size:clamp(26px,3.4vw,33px); letter-spacing:-.034em; }
+h2{ font-size:clamp(20px,2.4vw,23px); letter-spacing:-.028em; }
+h3{ font-size:17px; letter-spacing:-.018em; }
 h4{ font-size:12px; letter-spacing:.06em; font-weight:700; color:var(--faint); }
 p{ margin:0; }
-.display{ font-size:34px; font-weight:800; letter-spacing:-.032em; line-height:1.15; }
+.display{ font-size:clamp(30px,4.4vw,42px); font-weight:800;
+  letter-spacing:-.04em; line-height:1.1; }
+
+/* ============================================================
+   שתי השורות שהביאו את קצב האתר פנימה
+   ------------------------------------------------------------
+   ⚠⚠ **כותרת לבדה אינה מסבירה מסך.** באתר לכל מקטע
+     יש תגית קטנה מעל, כותרת גדולה, ושורת פתיחה
+     שאומרת מה עושים כאן — וזה בדיוק מה שחסר למסך
+     שנפתח על טבלה בלי מילה.
+   ============================================================ */
+.eyebrow{ font-size:12.5px; font-weight:800; letter-spacing:.09em;
+  color:var(--warm, var(--accent)); margin-bottom:7px; }
+.lead{ font-size:16.5px; color:var(--muted); line-height:1.62;
+  max-width:62ch; margin-top:10px; }
 .muted{ color:var(--muted); }
 .faint{ color:var(--faint); font-size:13.5px; }
 .tiny{ font-size:12.5px; color:var(--faint); }
@@ -170,9 +191,26 @@ const SHELL = `
   min-width:19px; height:19px; border-radius:999px;
   display:grid; place-items:center; padding:0 5px; }
 
+/* ⚠⚠ **מיטשטשת ולא אטומה**, כמו באתר. רצועה אטומה
+   על גלילה חותכת את הדף לשניים; טשטוש משאיר את התוכן
+   נוכח מתחתיה.
+
+   ⚠ **והרקע האטום נשאר כנפילה לאחור.** דפדפן ללא
+     «backdrop-filter» היה מקבל רצועה שקופה למחצה שהטקסט
+     שמתחתיה עובר דרכה — בלתי קריא לגמרי. */
 .top{ position:sticky; top:0; z-index:30;
-  background:var(--surface); border-bottom:1px solid var(--line); }
-.top-in{ height:60px; display:flex; align-items:center; gap:var(--s3);
+  background:var(--surface); border-bottom:1px solid transparent;
+  transition:border-color var(--t-mid) var(--ease); }
+/* ⚠ **הקו מופיע רק כשגוללים**, כמו באתר. קו קבוע
+   מצייר גבול גם כשאין מה להפריד — הוא חותך את ראש
+   הדף לשתי רצועות בלי סיבה. */
+.top.on{ border-bottom-color:var(--line); }
+@supports ((backdrop-filter:blur(1px)) or (-webkit-backdrop-filter:blur(1px))){
+  .top{ background:color-mix(in srgb, var(--surface) 86%, transparent);
+    backdrop-filter:saturate(1.7) blur(14px);
+    -webkit-backdrop-filter:saturate(1.7) blur(14px); }
+}
+.top-in{ height:64px; display:flex; align-items:center; gap:var(--s3);
   padding:0 var(--s4); max-width:1180px; margin:0 auto; }
 .top .nm{ font-weight:800; letter-spacing:-.02em; font-size:16px; }
 .top .sub{ font-size:12.5px; color:var(--faint); margin-top:-3px; }
@@ -221,10 +259,20 @@ const SURFACE = `
      שדורש פעולה.
    ============================================================ */
 .card{ background:var(--surface); border:1px solid var(--line);
-  border-radius:var(--r-lg); padding:var(--s5); box-shadow:var(--e-1); }
-.card.tight{ padding:var(--s4); }
+  border-radius:var(--r-lg); padding:26px; box-shadow:var(--e-1); }
+.card.tight{ padding:17px; }
 .card.flat{ box-shadow:none; }
 .card.lift{ box-shadow:var(--e-3); border-color:var(--line-soft); }
+
+/* ⚠⚠ **ההרמה בריחוף שמורה לכרטיס שאפשר ללחוץ עליו.**
+   בדף הנחיתה כל הכרטיסים מורמים, כי אין שם מה ללחוץ.
+   באפליקציה כרטיס שמגיב לעכבר ואינו עושה דבר הוא
+   הבטחה שלא נשמרת — ולכן זו מחלקה ולא ברירת מחדל. */
+.card.hov{ transition:transform var(--t-mid) var(--ease),
+  box-shadow var(--t-mid) var(--ease), border-color var(--t-mid) var(--ease); }
+.card.hov:hover{ transform:translateY(-3px); box-shadow:var(--e-3);
+  border-color:var(--a-300); }
+@media (hover:none){ .card.hov:hover{ transform:none; } }
 
 /* ⚠⚠ פס גוון בקצה העליון של כרטיס. זה הפרט שהופך כרטיס לבן
    ל«כרטיס של משהו», והוא יורש את הגוון מההורה (.tone-N) —
@@ -237,10 +285,17 @@ const SURFACE = `
 .panel{ background:var(--sand); border-radius:var(--r-md); padding:var(--s4); }
 .hr{ height:1px; background:var(--line-soft); border:0; margin:var(--s4) 0; }
 
-.sec{ display:flex; align-items:flex-end; gap:var(--s3); margin:var(--s6) 0 var(--s3); }
+.sec{ display:flex; align-items:flex-end; gap:var(--s3); margin:var(--s6) 0 var(--s4); }
 .sec:first-child{ margin-top:0; }
 .sec h2{ flex:none; }
-.sec .ln{ flex:1; height:1px; background:var(--line-soft); margin-bottom:8px; }
+.sec .ln{ flex:1; height:1px; background:var(--line-soft); margin-bottom:9px; }
+
+/* ⚠ כותרת מקטע שלמה, במבנה של האתר: תגית קטנה,
+   כותרת, ושורת פתיחה. מחלקה אחת ולא שלושה מרווחים
+   שמוקלדים בכל מסך מחדש. */
+.head{ margin:var(--s6) 0 var(--s5); max-width:66ch; }
+.head:first-child{ margin-top:0; }
+.head h1,.head h2{ margin:0; }
 `;
 
 const TONE = `

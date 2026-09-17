@@ -13,13 +13,14 @@
     "seed": "node tools/seed.mjs",
     "seed:niroz": "node tools/seed-niroz.mjs",
     "reset": "node tools/seed.mjs --reset",
-    "check": "node tools/check.mjs && node tools/check-tenancy.mjs",
+    "check": "node tools/check.mjs && node tools/check-undef.mjs && node tools/check-tenancy.mjs",
     "check:static": "node tools/check.mjs",
     "check:tenancy": "node tools/check-tenancy.mjs",
     "new": "node tools/new-mechina.mjs",
     "root": "node tools/root.mjs",
     "verify": "sh tools/verify.sh",
-    "sync:roles": "node tools/sync-roles.mjs"
+    "sync:roles": "node tools/sync-roles.mjs",
+    "check:undef": "node tools/check-undef.mjs"
   },
   "dependencies": {
     "react": "18.3.1",

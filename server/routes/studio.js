@@ -26,7 +26,8 @@ import { hashPassword } from "../auth.js";
 /* ============================================================
    מצב האשף
    ============================================================ */
-export async function state({ profile, db }) {
+export async function state({ profile, db, tenant }) {
+  const tenantSlug = tenant?.slug || null;
   const counts = {};
   for (const [key, p] of Object.entries(PARSERS)) {
     /* ⚠ ספירה לפי מה שכבר קיים, כדי שהאשף יאמר «יש כבר 18»
@@ -41,6 +42,10 @@ export async function state({ profile, db }) {
   const mods = profile.modules || {};
   return {
     steps: WIZARD_STEPS,
+    /* ⚠ המזהה של המכינה — התצוגה המקדימה מציגה את
+       הכתובת האמיתית, וכתובת מומצאת בתצוגה שכל
+       תכליתה להראות «ככה זה ייראה» היא פרט שקרי. */
+    slug: tenantSlug,
     missing: missingSteps(profile),
     profile: {
       identity: profile.identity,

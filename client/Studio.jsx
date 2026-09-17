@@ -69,35 +69,37 @@ export function Studio({ onDone, embedded = false }) {
             כותרת גדולה, ושורת פתיחה. מי שנרשם דרך האתר
             מגיע לכאן בשנייה שאחרי, ועיצוב אחר לגמרי נקרא
             כמו מוצר אחר. */}
+      {/* ---------- הגיבור ----------
+          ⚠⚠⚠ **שתי עמודות כמו בדף הנחיתה: מילים ותצוגה.**
+            מי שנרשם דרך האתר מגיע לכאן בשנייה שאחרי,
+            ומסך שנפתח על טופס נקרא כמו מוצר אחר לגמרי.
+            התצוגה אינה קישוט: היא נושאת את הצבעים ואת
+            השם של המכינה הזו, ומתעדכנת בזמן אמת. */}
       {!embedded && (
-        <div className="card lift edge tone-2">
-          <div className="eyebrow">הקמה</div>
-          <h1 className="display">בונים את האפליקציה של המכינה</h1>
-          <p className="lead">
-            הכול כבר מלא מראש מתבנית של מכינה קדם-צבאית.
-            משנים רק את מה ששלכם. <b>שלושה שלבים חובה</b> — השאר מתי שנוח.
-          </p>
+        <div className="hero split">
+          <div>
+            <div className="eyebrow">הקמה</div>
+            <h1 className="display">בונים את האפליקציה של המכינה</h1>
+            <p className="lead">
+              הכול כבר מלא מראש מתבנית של מכינה קדם-צבאית.
+              משנים רק את מה ששלכם — <b>שלושה שלבים חובה</b>,
+              והשאר מתי שנוח.
+            </p>
 
-          {/* ⚠ **התקדמות כפס ולא כרשימת חסרים.** רשימת
-              «עוד לא הושלמו» אומרת מה חסר ולא כמה נשאר,
-              ומי שרואה שלושה שמות אינו יודע אם הוא בהתחלה
-              או בסוף. */}
-          <div className="row" style={{ marginTop: 20, gap: 14 }}>
-            <Bar className="grow" value={required - missing.size} max={required}
-              tone={missing.size ? "warn" : "ok"} />
-            <span className="tiny nowrap">
-              {missing.size === 0
-                ? "כל שלבי החובה הושלמו"
-                : `${required - missing.size} מתוך ${required} שלבי חובה`}
-            </span>
+            {/* ⚠ **התקדמות כפס ולא כרשימת חסרים.** רשימת
+                «עוד לא הושלמו» אומרת מה חסר ולא כמה נשאר. */}
+            <div className="row" style={{ marginTop: 26, gap: 14, maxWidth: 420 }}>
+              <Bar className="grow" value={required - missing.size} max={required}
+                tone={missing.size ? "warn" : "ok"} />
+              <span className="tiny nowrap">
+                {missing.size === 0
+                  ? "כל שלבי החובה הושלמו"
+                  : `${required - missing.size} / ${required} שלבי חובה`}
+              </span>
+            </div>
           </div>
 
-          {missing.size > 0 && (
-            <div className="banner info" style={{ marginBottom: 0, marginTop: 14 }}>
-              <MI.Info size={18} />
-              <div>עוד לא הושלמו: {[...missing].map((k) => meta[k]?.title || k).join(" · ")}</div>
-            </div>
-          )}
+          <div className="art"><Mock st={st} /></div>
         </div>
       )}
 
@@ -106,18 +108,24 @@ export function Studio({ onDone, embedded = false }) {
       )}
 
       {/* ---------- מסילת השלבים ----------
-          ⚠ מספר לצד שם הופך רשימה לרצף, ו«חובה» נאמר על
-            השלב עצמו ולא בהודעה נפרדת מעליו. */}
-      <div className="steps">
+          ⚠⚠ **עיגול ממוספר עם קו מקשר, ולא צ׳יפים.** הקו
+            הוא מה שהופך שמונה כפתורים לרצף שיש בו התחלה
+            וסוף — בלעדיו אי אפשר לדעת אם נשאר שלב אחד
+            או חמישה. */}
+      <div className="rail">
         {STEP_ORDER.map((k, i) => {
           const m = meta[k] || { title: k };
           const need = m.required && missing.has(k);
+          const done = !missing.has(k) && m.required;
           return (
-            <button key={k} className={"stp " + (step === k ? "on " : "") + (!missing.has(k) ? "done" : "")}
+            <button key={k} type="button"
+              className={"rl-i " + (step === k ? "on " : "") + (done ? "done" : "")}
               onClick={() => setStep(k)}>
-              <span className="no">{missing.has(k) ? i + 1 : "✓"}</span>
-              <span>{m.title}</span>
-              {need && <span className="must">חובה</span>}
+              <span className="rl-n">{done ? "✓" : i + 1}</span>
+              <span className="rl-t">
+                {m.title}
+                {need && <em>חובה</em>}
+              </span>
             </button>
           );
         })}
@@ -170,6 +178,61 @@ export function Studio({ onDone, embedded = false }) {
    ⚠ תצוגה מקדימה **חיה**: שינוי צבע נראה מיד על המסך עצמו,
      לפני שמירה. אחרת מנהל מכינה בוחר צבע בעיוורון.
    ============================================================ */
+/* ============================================================
+   התצוגה החיה — האפליקציה מצוירת ב-CSS
+   ------------------------------------------------------------
+   ⚠⚠⚠ **זה מה שהופך את מסך הצבעים ממשהו מנהלי
+     למשהו שרוצים לגעת בו.** בורר שמראה ריבוע צבע
+     אומר «זה הגוון»; בורר שמראה את **האפליקציה עצמה**
+     מתחלפת אומר «ככה זה ייראה לחניכים שלך» — וזו
+     השאלה שראש מכינה באמת שואל.
+
+   ⚠⚠ **ואין כאן שום קוד שמסנכרן.** כל צבע בתצוגה הוא
+     משתנה CSS מהאפיון, ו-`applyTheme` מחליפה אותו על השורש.
+     מי שינסה «לעדכן את התצוגה» יבנה מסלול שני שיתפצל
+     מהראשון בתיקון הראשון.
+
+   ⚠ **מצויר ולא צילום מסך.** צילום מתיישן ברגע שמסך
+     משתנה, ואז ההגדרות מראות מוצר שאינו קיים.
+
+   ⚠ **והתוכן בו אינו נתון אמיתי** — הוא המבנה בלבד.
+     שליפה אמיתית לתצוגה מקדימה היתה קריאה נוספת לכל
+     טעינת אשף, בשביל תמונה שכל תכליתה להראות צבע.
+   ============================================================ */
+function Mock({ st }) {
+  const id = st.profile.identity || {};
+  const name = id.shortName || id.name || "המכינה";
+
+  return (
+    <div className="mock" aria-hidden="true">
+      <div className="mk-bar">
+        <i /><i /><i />
+        <b>{"/m/" + (st.slug || "mechina") + "/"}</b>
+      </div>
+      <div className="mk-body">
+        <div className="mk-side">
+          <u className="on"><i />מסך הבית</u>
+          <u><i />נוכחות</u>
+          <u><i />בקשות</u>
+          <u><i />תקלות</u>
+          <u><i />לוח מודעות</u>
+        </div>
+        <div className="mk-main">
+          <div className="mk-h">{"בוקר טוב, " + name}</div>
+          <div className="mk-band">
+            <div><b className="a">94%</b><span>נוכחות</span></div>
+            <div><b>28</b><span>חניכים</span></div>
+            <div><b className="w">3</b><span>בקשות</span></div>
+          </div>
+          <div className="mk-li"><i />הנוכחות טרם סומנה<span>היום</span></div>
+          <div className="mk-li"><i />בקשת יציאה חדשה<span>חדש</span></div>
+          <div style={{ marginTop: 10 }}><span className="mk-btn">לסימון הנוכחות</span></div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 const COLORS = [
   ["accent", "צבע ראשי", "הכותרות, הכפתורים והלוגו"],
   ["bg", "רקע", "הצבע שמאחורי הכול"],
@@ -187,51 +250,76 @@ function Identity({ st, save }) {
     applyTheme(next.colors);   /* ⚠ מיד, לא אחרי שמירה */
   };
 
+  /* ⚠ התצוגה מקבלת את מה שמוקלד עכשיו ולא את מה
+     שנשמר — אחרת השם בתצוגה מפגר בשמירה אחת אחרי
+     מה שעל המסך, וזה נראה כמו תקלה. */
+  const live = { ...st, profile: { ...st.profile, identity: v } };
+
   return (
     <>
-      <Sec>הזהות של המכינה</Sec>
-      <p className="muted">מה שמופיע במסך הכניסה ובראש כל עמוד.</p>
+      <div className="pane">
+        <div className="head">
+          <h3>השם של המכינה</h3>
+          <p className="lead">מה שמופיע במסך הכניסה ובראש כל עמוד.</p>
+        </div>
 
-      <div className="two" style={{ marginTop: 18 }}>
-        <label className="field">
-          <span>שם המכינה<span className="req">*</span></span>
-          <input value={v.name || ""} placeholder="מכינת ..."
-            onChange={(e) => set("name", e.target.value)} />
-        </label>
-        <label className="field">
-          <span>שם קצר <span className="faint">— לאות שבלוגו</span></span>
-          <input value={v.shortName || ""}
-            onChange={(e) => set("shortName", e.target.value)} />
+        <div className="two">
+          <label className="field">
+            <span>שם המכינה<span className="req">*</span></span>
+            <input value={v.name || ""} placeholder="מכינת ..."
+              onChange={(e) => set("name", e.target.value)} />
+          </label>
+          <label className="field">
+            <span>שם קצר <span className="faint">— לאות שבלוגו</span></span>
+            <input value={v.shortName || ""}
+              onChange={(e) => set("shortName", e.target.value)} />
+          </label>
+        </div>
+        <label className="field" style={{ marginBottom: 0 }}>
+          <span>כותרת משנה</span>
+          <input value={v.tagline || ""}
+            onChange={(e) => set("tagline", e.target.value)} />
         </label>
       </div>
-      <label className="field">
-        <span>כותרת משנה</span>
-        <input value={v.tagline || ""}
-          onChange={(e) => set("tagline", e.target.value)} />
-      </label>
 
-      <Sec>צבעים</Sec>
-      <p className="faint">
-        כל שינוי נראה מיד על המסך הזה. שמירה קובעת אותו לכולם.
-      </p>
-      <div className="auto" style={{ marginTop: 12 }}>
-        {COLORS.map(([k, label, why]) => (
-          <div key={k} className="swatch">
-            <input type="color" value={v.colors?.[k] || "#000000"}
-              aria-label={label}
-              onChange={(e) => setColor(k, e.target.value)} />
-            <span className="grow">
-              <div style={{ fontWeight: 600, fontSize: 14 }}>{label}</div>
-              <div className="tiny">{why}</div>
-            </span>
-            <span className="hx">{v.colors?.[k]}</span>
+      {/* ---------- הצבעים ----------
+          ⚠⚠⚠ **התצוגה לצד הבוררים ולא אחריהם.** מי שבוחר
+            צבע רוצה לראות מה הוא עשה באותה שנייה, ותצוגה
+            שיושבת שתי גלילות מתחת אינה קיימת. */}
+      <div className="pane sunk">
+        <div className="head">
+          <div className="eyebrow">הצבעים שלכם</div>
+          <h3>כך האפליקציה תיראה לחניכים</h3>
+          <p className="lead">
+            כל שינוי נראה <b>מיד</b>, גם על המסך הזה וגם בתצוגה.
+            שמירה קובעת אותו לכולם.
+          </p>
+        </div>
+
+        <div className="hero split" style={{ padding: 0 }}>
+          <div className="stack" style={{ gap: "var(--s2)" }}>
+            {COLORS.map(([k, label, why]) => (
+              <label key={k} className="sw-c">
+                <input type="color" value={v.colors?.[k] || "#000000"}
+                  aria-label={label}
+                  onChange={(e) => setColor(k, e.target.value)} />
+                <span className="grow">
+                  <div style={{ fontWeight: 700, fontSize: 14.5 }}>{label}</div>
+                  <div className="tiny">{why}</div>
+                </span>
+                <span className="hx">{v.colors?.[k]}</span>
+              </label>
+            ))}
           </div>
-        ))}
+          <div className="art"><Mock st={live} /></div>
+        </div>
       </div>
 
-      <div className="btns" style={{ marginTop: 22 }}>
-        <button className="btn" disabled={!v.name?.trim()}
-          onClick={() => save("identity", { identity: v })}>שמירה</button>
+      <div className="btns">
+        <button className="btn lg" disabled={!v.name?.trim()}
+          onClick={() => save("identity", { identity: v })}>
+          <MI.Check size={18} />שמירת הזהות
+        </button>
       </div>
     </>
   );
@@ -649,72 +737,136 @@ function Modules({ st, save }) {
   /* ⚠⚠ **מודול שטרם נבנה אינו נדלק ואינו מוסתר.** מנהל
      שרואה «מלאי וציוד — בבנייה» יודע מה יהיה; מנהל שאינו
      רואה אותו מסיק שהמוצר אינו עושה זאת. */
+  /* ⚠⚠⚠ **לכבות מותר תמיד; להדליק רק מה שנבנה.**
+     הגרסה הראשונה חסמה את שני הכיוונים, והתוצאה נתפסה
+     בצילום: במכינה שהדלתא שלה נכתבה לפני שהיה `built`,
+     מודול שטרם נבנה יושב **דלוק ובלתי ניתן לכיבוי** —
+     כלומר לשוניות שנפתחות לכלום ואין דרך להסיר אותן.
+     מלכודת מושלמת, והפתרון הוא שכיבוי לעולם אינו נחסם. */
   const toggle = (k) => {
-    if (cat[k].core || !cat[k].built) return;
+    if (cat[k].core) return;
+    if (!cat[k].built && !mods[k]) return;   /* להדליק — לא. לכבות — כן. */
     setMods({ ...mods, [k]: !mods[k] });
   };
-  const on = Object.keys(cat).filter((k) => cat[k].core || mods[k]);
+
+  const keys = Object.keys(cat);
+  const buildable = keys.filter((k) => cat[k].built);
+  const soon = keys.filter((k) => !cat[k].built);
+  /* ⚠ **נספר מתוך מה שנבנה ולא מתוך הכול.** ספירה שכללה
+     מודולים שדלוקים בדלתא ישנה וטרם נבנו הדפיסה «8 מתוך 6»,
+     ומספר שגדול מהמכנה שלו הוא הדבר הראשון שעוצר את העין. */
+  const on = buildable.filter((k) => cat[k].core || mods[k]);
+  /* ⚠ מודול שטרם נבנה ודלוק בדלתא — מצב שצריך להיאמר. */
+  const staleOn = soon.filter((k) => mods[k]);
+
+  const dirty = JSON.stringify(mods) !== JSON.stringify(st.profile.modules || {});
+
+  const Card = ({ k }) => {
+    const m = cat[k];
+    const need = blocked(k);
+    const isOn = Boolean(m.core || mods[k]);
+    const Icon = MI.moduleIcon(k);
+    return (
+      <div className={"card " + (isOn ? "" : "dim ") + tone(m.title)}>
+        <div className="row start" style={{ marginBottom: 12 }}>
+          <div className="ic"><Icon size={21} /></div>
+          <span className="grow" />
+          {/* ⚠ המתג מוצג גם למודול שטרם נבנה **כשהוא דלוק**,
+              כדי שיהיה אפשר לכבות אותו. ראו ההערה על `toggle`. */}
+          {m.built || isOn ? (
+            <span className="sw">
+              <input type="checkbox" aria-label={m.title}
+                checked={isOn} disabled={m.core || (m.built && need.length > 0)}
+                onChange={() => toggle(k)} />
+              <i />
+            </span>
+          ) : (
+            <span className="pill out">בבנייה</span>
+          )}
+        </div>
+
+        <h3>{m.title}</h3>
+        <p>{m.why}</p>
+
+        <div className="row wrap" style={{ gap: 5, marginTop: "auto", paddingTop: 12 }}>
+          {m.core && <span className="pill">תמיד דלוק</span>}
+          {m.private && <span className="pill info">פרטי לחניך</span>}
+          {isOn && m.screens.length > 0 && (
+            <span className="pill tone">{m.screens.length} מסכים</span>
+          )}
+        </div>
+
+        {need.length > 0 && (
+          <p className="tiny" style={{ marginTop: 8, color: "var(--warn)" }}>
+            דורש: {need.map((n) => cat[n].title).join(" · ")}
+          </p>
+        )}
+        {/* ⚠ מה שהמודול פותח, בשמות — מספר לבדו אינו
+            עוזר להחליט אם להדליק. */}
+        {isOn && m.screens.length > 0 && (
+          <p className="tiny" style={{ marginTop: 6 }}>{m.screens.join(" · ")}</p>
+        )}
+      </div>
+    );
+  };
 
   return (
     <>
-      <Sec right={<span className="pill tone">
-        {on.length} / {Object.keys(cat).filter((k) => cat[k].built).length}
-      </span>}>
-        מה יהיה באפליקציה שלכם
-      </Sec>
-      <p className="muted">
-        מה שכבוי <b>אינו קיים</b> — לא בתפריט, לא בחיפוש, ולא כטבלה.
-        אפשר להדליק בכל רגע.
-      </p>
-
-      <div className="auto" style={{ marginTop: 16 }}>
-        {Object.entries(cat).map(([k, m]) => {
-          const need = blocked(k);
-          const isOn = Boolean(m.core || mods[k]);
-          const Icon = MI.moduleIcon(k);
-          return (
-            <div key={k} className={"card tight hov " + (isOn ? "" : "dim ") + tone(m.title)}>
-              <div className="row start">
-                <div className="tile sm"><Icon size={15} /></div>
-                <span className="grow">
-                  <div className="nm">{m.title}</div>
-                  <div className="row" style={{ gap: 5, marginTop: 3 }}>
-                    {m.core && <span className="pill">תמיד דלוק</span>}
-                    {!m.built && <span className="pill out">בבנייה</span>}
-                    {m.private && <span className="pill info">פרטי לחניך</span>}
-                  </div>
-                </span>
-                <span className="sw">
-                  <input type="checkbox" aria-label={m.title}
-                    checked={isOn} disabled={m.core || !m.built || need.length > 0}
-                    onChange={() => toggle(k)} />
-                  <i />
-                </span>
-              </div>
-              <p className="tiny" style={{ marginTop: 8 }}>{m.why}</p>
-              {!m.built && (
-                <p className="tiny" style={{ marginTop: 6 }}>
-                  המסכים שלו עוד נכתבים. הוא ייפתח להדלקה כשיהיה מוכן,
-                  והדלקה עכשיו היתה נותנת לשוניות שאין מאחוריהן כלום.
-                </p>
-              )}
-              {need.length > 0 && (
-                <p className="tiny" style={{ marginTop: 6, color: "var(--warn)" }}>
-                  דורש: {need.map((n) => cat[n].title).join(" · ")}
-                </p>
-              )}
-              {isOn && m.screens.length > 0 && (
-                <p className="tiny" style={{ marginTop: 6 }}>
-                  מסכים: {m.screens.join(" · ")}
-                </p>
-              )}
-            </div>
-          );
-        })}
+      <div className="head">
+        <div className="eyebrow">{on.length} מתוך {buildable.length} דלוקים</div>
+        <h3>מה יהיה באפליקציה שלכם</h3>
+        <p className="lead">
+          מה שכבוי <b>אינו קיים</b> — לא בתפריט, לא בחיפוש,
+          ולא כטבלה. אפשר להדליק ולכבות בכל רגע.
+        </p>
       </div>
 
-      <div className="btns" style={{ marginTop: 22 }}>
-        <button className="btn" onClick={() => save("modules", { modules: mods })}>שמירה</button>
+      <div className="feat">
+        {buildable.map((k) => <Card k={k} key={k} />)}
+      </div>
+
+      {/* ---------- מה שעוד נבנה ----------
+          ⚠⚠ **מוצג ואינו מוסתר, ובנפרד ממה שאפשר
+            להדליק.** מעורבב באותה רשת, מנהל מנסה להדליק
+            מודול ולא מבין למה המתג אינו עובד. */}
+      {soon.length > 0 && (
+        <div className="pane sunk">
+          <div className="head">
+            <div className="eyebrow">בדרך</div>
+            <h3>{soon.length} מודולים שעוד נבנים</h3>
+            <p className="lead">
+              הם ייפתחו להדלקה כשיהיו מוכנים. הדלקה עכשיו היתה
+              נותנת לשוניות שאין מאחוריהן כלום.
+            </p>
+            {/* ⚠⚠ **מודול שנשאר דלוק מגרסה קודמת נאמר במפורש.**
+                הוא נותן לשוניות בתפריט שנפתחות ל«בבנייה», וזה
+                בדיוק מה שהדגל הזה נועד למנוע. */}
+            {staleOn.length > 0 && (
+              <div className="banner warn" style={{ marginTop: 14, marginBottom: 0 }}>
+                <MI.Warn size={18} />
+                <div>
+                  <b>{staleOn.length} מהם דלוקים אצלכם</b> מהגדרה קודמת,
+                  ונותנים לשוניות שעוד אין מאחוריהן מסך. אפשר לכבות אותם
+                  כאן ולהדליק שוב כשיהיו מוכנים.
+                </div>
+              </div>
+            )}
+          </div>
+          <div className="feat">
+            {soon.map((k) => <Card k={k} key={k} />)}
+          </div>
+        </div>
+      )}
+
+      <div className="btns">
+        <button className="btn lg" disabled={!dirty}
+          onClick={() => save("modules", { modules: mods })}>
+          <MI.Check size={18} />שמירה
+        </button>
+        {dirty && (
+          <button className="btn quiet"
+            onClick={() => setMods(st.profile.modules || {})}>ביטול השינויים</button>
+        )}
       </div>
     </>
   );

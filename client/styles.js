@@ -559,6 +559,201 @@ const BITS = `
 .stp.on .must{ color:var(--a-ink); opacity:.75; }
 `;
 
+const PAGE = `
+/* ============================================================
+   שפת הדף — מה שהובא מדף הנחיתה, ולא רק הטוקנים
+   ------------------------------------------------------------
+   ⚠⚠⚠ **הפער בין דף הנחיתה לאפליקציה לא היה בצבע ולא בגודל
+     הגופן — הוא היה במבנה.** לדף נחיתה יש דקדוק: תגית מעל
+     כותרת, כותרת ענק, שורת פתיחה, ואז רשת של כרטיסים שלכל
+     אחד אייקון בגוון משלו. לאפליקציה היה כרטיס לבן אחד עם
+     טופס בתוכו. החלפת רדיוסים וגדלים בלבד השאירה את שתי
+     השפות במקומן, ובדיוק לכך התכוון מי שאמר שהעיצוב לא
+     השתנה.
+
+   ⚠⚠ **הכול כאן נגזר מהאפיון ואינו פלטה שנייה.** דף הנחיתה
+     נושא פלטה קבועה (קרם · נייבי · חימר) כי הוא המותג של
+     המוצר; מסך של מכינה נושא את **הצבעים שלה**. אותו דקדוק,
+     צבע אחר — וזה מה שמאפשר לאותו עיצוב לשרת מאה מכינות.
+   ============================================================ */
+
+/* ============================================================
+   הגיבור
+   ⚠ **ההילה מאחוריו ולא מתחתיו.** רדיאל רך בפינה נותן עומק
+     בלי לצייר קופסה שנייה סביב הטקסט.
+   ⚠ ו-overflow:hidden חובה — בלעדיו ההילה מרחיבה את הדף
+     ומייצרת גלילה אופקית בטלפון.
+   ============================================================ */
+.hero{ position:relative; overflow:hidden; padding:8px 0 4px; }
+.hero::before{
+  content:""; position:absolute; inset-inline-start:-14%; top:-58%;
+  width:62%; aspect-ratio:1; border-radius:50%; pointer-events:none;
+  background:radial-gradient(circle at 50% 50%, var(--a-soft-2), transparent 64%);
+}
+.hero>*{ position:relative; }
+.hero .display{ max-width:20ch; }
+.hero .lead{ margin-top:14px; }
+.hero .btns{ margin-top:24px; }
+
+/* ⚠ שתי עמודות: טקסט ותצוגה. בטלפון הן נערמות, והתצוגה
+   **יורדת למטה** — מי שנכנס בטלפון רוצה קודם את המילים. */
+.hero.split{ display:grid; grid-template-columns:1.02fr .98fr;
+  gap:var(--s7); align-items:center; }
+@media (max-width:900px){
+  .hero.split{ grid-template-columns:1fr; gap:var(--s5); }
+  .hero.split>.art{ order:2; }
+}
+
+/* ============================================================
+   מסילת השלבים — ממוספרת, עם קו מקשר
+   ⚠⚠ **הקו הוא מה שהופך רשימה לרצף.** בלעדיו שמונה עיגולים
+     נראים כמו שמונה כפתורים שאין ביניהם סדר, ומי שמסתכל
+     אינו יודע אם הוא באמצע או בהתחלה.
+   ⚠ הקו **מאחורי** העיגולים (z-index) ונעצר בקצוות, אחרת
+     הוא בורח מהשלב הראשון והאחרון החוצה.
+   ============================================================ */
+.rail{ display:flex; gap:0; overflow-x:auto; scrollbar-width:none;
+  padding:var(--s2) 0 var(--s4); position:relative; }
+.rail::-webkit-scrollbar{ display:none; }
+.rl-i{ flex:1 0 auto; min-width:104px; position:relative;
+  display:flex; flex-direction:column; align-items:center; gap:7px;
+  padding:0 6px; text-align:center; }
+/* ⚠⚠ **הקו נמתח לכיוון השלב הבא, ולכן «inset-inline-end».**
+   עם «inset-inline-start» הקו נמתח הפוך — ב-RTL זה הצד הימני,
+   והשלב הראשון צייר קו שיוצא מהמסילה ומרחף באוויר.
+   נתפס בצילום מסך ולא בשום בדיקה — CSS שגוי אינו שגיאה. */
+.rl-i:not(:last-child)::after{
+  content:""; position:absolute; top:17px; height:2px; z-index:0;
+  inset-inline-end:-50%; width:100%;
+  background:var(--line);
+}
+.rl-i.done:not(:last-child)::after{ background:var(--ok); opacity:.45; }
+.app .rl-n{ width:34px; height:34px; border-radius:var(--r-full); z-index:1;
+  display:grid; place-items:center; font-size:14px; font-weight:800;
+  background:var(--surface); color:var(--faint);
+  border:2px solid var(--line);
+  transition:transform var(--t-fast) var(--ease),
+             background var(--t-fast) var(--ease),
+             border-color var(--t-fast) var(--ease),
+             color var(--t-fast) var(--ease); }
+.rl-i:hover .rl-n{ transform:scale(1.08); }
+.rl-i.done .rl-n{ background:var(--ok-soft); border-color:var(--ok); color:var(--ok); }
+.rl-i.on .rl-n{ background:linear-gradient(180deg,var(--a-grad-a),var(--a-grad-b));
+  border-color:transparent; color:var(--a-ink);
+  box-shadow:0 6px 16px -6px var(--a-glow); }
+.rl-t{ font-size:12.5px; font-weight:600; color:var(--faint); line-height:1.3; }
+.rl-i.on .rl-t{ color:var(--ink); font-weight:800; }
+.rl-t em{ display:block; font-style:normal; font-size:10.5px; color:var(--bad);
+  font-weight:800; }
+
+/* ============================================================
+   רשת התכונות — כרטיס עם אריח אייקון בגוון
+   ⚠ **האריח הוא מה שעושה את ההבדל.** כרטיס עם כותרת ושורה
+     הוא פסקה; אותו כרטיס עם ריבוע מעוגל בגוון נסרק בעין
+     כפריט ברשימה. זה בדיוק מה שדף הנחיתה עושה בכל מקטע.
+   ============================================================ */
+.feat{ display:grid; gap:var(--s4);
+  grid-template-columns:repeat(auto-fit,minmax(248px,1fr)); }
+.feat>.card{ display:flex; flex-direction:column; }
+.feat .ic{ width:46px; height:46px; border-radius:var(--r-md); flex:none;
+  display:grid; place-items:center; margin-bottom:var(--s3);
+  background:var(--t-s); color:var(--t); }
+.feat h3{ margin-bottom:5px; }
+.feat p{ color:var(--muted); font-size:14.5px; line-height:1.6; }
+
+/* ============================================================
+   מקטע על משטח אחר
+   ⚠⚠ **ניגוד בין מקטעים הוא מה שמייצר קצב.** דף שכולו
+     כרטיסים לבנים על קרם נקרא כרשימה אחת ארוכה; מקטע שיושב
+     על משטח אחר אומר «כאן מתחיל נושא חדש» בלי קו ובלי כותרת.
+   ============================================================ */
+.pane{ background:var(--surface); border:1px solid var(--line);
+  border-radius:var(--r-xl); padding:var(--s6);
+  margin:var(--s5) 0; box-shadow:var(--e-1); }
+.pane.sunk{ background:var(--sand); box-shadow:none; }
+.pane>.head:first-child{ margin-top:0; }
+@media (max-width:640px){ .pane{ padding:var(--s4); border-radius:var(--r-lg); } }
+
+/* ============================================================
+   התצוגה החיה — האפליקציה מצוירת ב-CSS
+   ------------------------------------------------------------
+   ⚠⚠⚠ **זה מה שהופך את מסך הצבעים ממשהו מנהלי למשהו שרוצים
+     לגעת בו.** בורר צבעים שמראה ריבוע צבע אומר «זה הגוון»;
+     בורר שמראה את **האפליקציה עצמה** מתחלפת בזמן אמת אומר
+     «ככה זה ייראה לחניכים שלך» — וזו השאלה שראש המכינה באמת
+     שואל.
+
+   ⚠ **מצויר ולא צילום מסך.** צילום מתיישן ברגע שמסך משתנה,
+     ואז ההגדרות מראות מוצר שאינו קיים. מה שמצויר כאן הוא
+     המבנה — רצועה, סרגל, רשת, רשימה — והוא נשאר נכון.
+
+   ⚠ **וכל צבע בו הוא משתנה מהאפיון**, ולכן הוא מתעדכן
+     מעצמו ברגע שנבחר גוון. אין כאן שום קוד שמסנכרן.
+   ============================================================ */
+.mock{ background:var(--surface); border:1px solid var(--line);
+  border-radius:var(--r-xl); overflow:hidden; box-shadow:var(--e-4);
+  transform:perspective(1500px) rotateY(3deg); }
+@media (max-width:900px){ .mock{ transform:none; } }
+.mk-bar{ height:34px; background:var(--sand); border-bottom:1px solid var(--line);
+  display:flex; align-items:center; gap:5px; padding:0 12px; }
+.mk-bar i{ width:8px; height:8px; border-radius:50%; background:var(--line);
+  flex:none; }
+.mk-bar b{ margin-inline-start:auto; font-size:10.5px; color:var(--faint);
+  font-weight:500; font-family:ui-monospace,Menlo,Consolas,monospace;
+  direction:ltr; }
+.mk-body{ display:flex; min-height:246px; background:var(--bg); }
+.mk-side{ width:118px; flex:none; background:var(--surface);
+  border-inline-start:1px solid var(--line); padding:12px 8px; order:2; }
+.mk-side u{ display:flex; align-items:center; gap:6px; text-decoration:none;
+  font-size:11px; color:var(--muted); padding:6px 7px;
+  border-radius:var(--r-xs); margin-bottom:2px; }
+.mk-side u.on{ background:var(--a-soft); color:var(--accent); font-weight:700; }
+.mk-side u i{ width:12px; height:12px; border-radius:4px; background:var(--line);
+  flex:none; }
+.mk-side u.on i{ background:var(--accent); }
+.mk-main{ flex:1; padding:14px; order:1; min-width:0; }
+.mk-h{ font-size:14px; font-weight:800; letter-spacing:-.025em; margin-bottom:10px; }
+.mk-band{ display:grid; grid-template-columns:repeat(3,1fr); gap:1px;
+  background:var(--line); border:1px solid var(--line);
+  border-radius:var(--r-sm); overflow:hidden; margin-bottom:11px; }
+.mk-band div{ background:var(--surface); padding:9px 6px; text-align:center; }
+.mk-band b{ display:block; font-size:16px; font-weight:800; letter-spacing:-.03em; }
+.mk-band span{ font-size:9.5px; color:var(--faint); }
+.mk-band .a{ color:var(--accent); } .mk-band .w{ color:var(--warm); }
+.mk-li{ display:flex; align-items:center; gap:7px; background:var(--surface);
+  border:1px solid var(--line); border-radius:var(--r-sm);
+  padding:7px 9px; font-size:11px; margin-bottom:5px; }
+.mk-li i{ width:19px; height:19px; border-radius:6px; flex:none;
+  background:var(--a-soft); }
+.mk-li span{ margin-inline-start:auto; font-size:9.5px; font-weight:700;
+  border-radius:var(--r-full); padding:2px 8px;
+  background:var(--w-soft); color:var(--warm); }
+.mk-btn{ display:inline-flex; height:26px; align-items:center; padding:0 13px;
+  border-radius:var(--r-xs); font-size:11px; font-weight:700;
+  background:linear-gradient(180deg,var(--a-grad-a),var(--a-grad-b));
+  color:var(--a-ink); box-shadow:0 4px 12px -5px var(--a-glow); }
+
+/* ============================================================
+   בורר צבע — גדול, ועם השם לצידו
+   ⚠ ריבוע של 20px אינו מאפשר לראות גוון. הדגימה כאן היא
+     העיקר בשורה, ולא קישוט שמאלה מהטקסט.
+   ============================================================ */
+.app .sw-c{ display:flex; align-items:center; gap:var(--s3);
+  padding:var(--s3); border:1px solid var(--line);
+  border-radius:var(--r-md); background:var(--surface); width:100%;
+  text-align:start; transition:border-color var(--t-fast) var(--ease),
+    box-shadow var(--t-fast) var(--ease); }
+.app .sw-c:hover{ border-color:var(--a-300); box-shadow:var(--e-2); }
+.sw-c input[type="color"]{ width:46px; height:46px; flex:none; padding:0;
+  border:1px solid var(--line); border-radius:var(--r-sm);
+  background:none; cursor:pointer; }
+.sw-c input[type="color"]::-webkit-color-swatch-wrapper{ padding:2px; }
+.sw-c input[type="color"]::-webkit-color-swatch{ border:none;
+  border-radius:calc(var(--r-sm) - 3px); }
+.sw-c .hx{ font-family:ui-monospace,Menlo,Consolas,monospace; direction:ltr;
+  font-size:11.5px; color:var(--faint); margin-inline-start:auto; }
+`;
+
 const OVERLAY = `
 /* ============================================================
    שכבות על
@@ -772,7 +967,7 @@ const DATA = `
 
 export const CSS = [
   ":root{\n" + rootVars() + SCALE + "}",
-  BASE, TYPE, SHELL, SURFACE, TONE, BUTTON, FORM, BITS, DATA, OVERLAY, MOTION,
+  BASE, TYPE, SHELL, SURFACE, TONE, BUTTON, FORM, BITS, DATA, PAGE, OVERLAY, MOTION,
 ].join("\n");
 
 export { applyTheme, toneOf } from "./theme.js";
